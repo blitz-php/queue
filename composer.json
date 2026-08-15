@@ -1,0 +1,82 @@
+{
+    "name": "blitz-php/queue",
+    "description": "Gestionnaire de file d'attente pour BlitzPHP",
+    "keywords": ["blitz-php", "blitz php", "queue", "database", "redis", "predis" ],
+    "homepage": "https://github.com/blitz-php/tasks",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Dimitri Sitchet Tomkeu",
+            "email": "devcode.dst@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1"
+    },
+    "require-dev": {
+        "blitz-php/coding-standard": "^1.4",
+        "blitz-php/framework": "^0.11.3",
+        "kahlan/kahlan": "^6.0",
+        "phpstan/phpstan": "^2.1",
+		"predis/predis": "^2.0 || ^3.0",
+        "php-amqplib/php-amqplib": "^3.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "BlitzPHP\\Queue\\": "src"
+        },
+		"exclude-from-classmap": [
+            "**/Database/Migrations/**"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BlitzPHP\\Queue\\Spec\\": "spec"
+        }
+    },
+	"suggest": {
+        "ext-redis": "If you want to use RedisHandler",
+        "predis/predis": "If you want to use PredisHandler",
+        "php-amqplib/php-amqplib": "If you want to use RabbitMQHandler"
+    },
+	"scripts": {
+       "test": "vendor/bin/kahlan",
+		"test:cov": [
+			"Composer\\Config::disableProcessTimeout",
+			"vendor/bin/kahlan --coverage=4 --reporter=verbose --clover=clover.xml"
+		],
+		"cs": [
+            "Composer\\Config::disableProcessTimeout",
+            "php-cs-fixer check --ansi --verbose --diff"
+        ],
+        "cs:fix": [
+			"Composer\\Config::disableProcessTimeout",
+			"vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --allow-risky=yes"
+		],
+		"phpstan:baseline": [
+            "Composer\\Config::disableProcessTimeout",
+            "bash -c \"XDEBUG_MODE=off phpstan analyse --ansi --generate-baseline phpstan-baseline.php\""
+		],
+        "phpstan:check": [
+            "Composer\\Config::disableProcessTimeout",
+            "bash -c \"XDEBUG_MODE=off vendor/bin/phpstan analyse --verbose --ansi\""
+		]
+    },
+    "scripts-descriptions": {
+        "test": "Execute les tests unitaires",
+        "cs": "Verifie le style de codage",
+        "cs:fix": "Corrige le style de codage",
+		"phpstan:baseline": "Exécute PHPStan puis transférer toutes les erreurs vers le fichier de baseline",
+        "phpstan:check": "Exécute PHPStan avec la prise en charge des identifiants"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

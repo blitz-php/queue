@@ -1,0 +1,10 @@
+includes:
+	- phpstan-baseline.php
+
+parameters:
+    tmpDir: build/phpstan
+    level: 6
+    paths:
+        - src
+    bootstrapFiles:
+        - spec/bootstrap.php
