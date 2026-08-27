@@ -50,7 +50,7 @@ Créez votre premier Job via la commande:
 php klinge queue:job Example
 ```
 
-Et ajoutez-le au tableau des gestionnaires (`handlers`) dans le fichier `app\Config\queue.php`:
+Et ajoutez-le au tableau des gestionnaires (`jobs`) dans le fichier `app\Config\queue.php`:
 
 ```php
 // ...
@@ -62,7 +62,7 @@ use App\Jobs\Example;
 return [
 	// ---
 	
-	'handlers' => [
+	'jobs' => [
 		'my-example' => Example::class
 	],
 
