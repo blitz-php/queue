@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -12,7 +21,6 @@ use BlitzPHP\Queue\Exceptions\InvalidPayloadException;
 use BlitzPHP\Traits\Support\InteractsWithTime;
 use BlitzPHP\Utilities\Date;
 use BlitzPHP\Utilities\Iterable\Collection;
-use BlitzPHP\Utilities\String\Text;
 use BlitzPHP\Utilities\String\Uuid;
 use Closure;
 use DateInterval;
@@ -58,14 +66,14 @@ abstract class Queue implements QueueContract
     /**
      * Callbacks exécutés lors de la construction du payload.
      *
-     * @var callable[]
+     * @var list<callable>
      */
     protected static array $createPayloadCallbacks = [];
 
     /**
      * Envoie un job sur une file nommée.
      */
-    public function pushOn(string $queue, string|object $job, mixed $data = ''): mixed
+    public function pushOn(string $queue, object|string $job, mixed $data = ''): mixed
     {
         return $this->push($job, $data, $queue);
     }
@@ -73,7 +81,7 @@ abstract class Queue implements QueueContract
     /**
      * Envoie un job sur une file nommée, avec un délai en secondes.
      */
-    public function laterOn(string $queue, DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = ''): mixed
+    public function laterOn(string $queue, DateInterval|DateTimeInterface|int $delay, object|string $job, mixed $data = ''): mixed
     {
         return $this->later($delay, $job, $data, $queue);
     }
@@ -81,7 +89,7 @@ abstract class Queue implements QueueContract
     /**
      * Envoie plusieurs jobs sur la file.
      *
-     * @param array<int, string|Job> $jobs
+     * @param array<int, Job|string> $jobs
      *
      * @return void
      */
@@ -105,7 +113,7 @@ abstract class Queue implements QueueContract
      *
      * @throws InvalidPayloadException Si l'encodage JSON échoue.
      */
-    protected function createPayload(string|object $job, string $queue, mixed $data = '', DateTimeInterface|DateInterval|int|null $delay = null): ?string
+    protected function createPayload(object|string $job, string $queue, mixed $data = '', DateInterval|DateTimeInterface|int|null $delay = null): ?string
     {
         if ($job instanceof Closure) {
             $job = CallQueuedClosure::create($job);
@@ -121,7 +129,8 @@ abstract class Queue implements QueueContract
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new InvalidPayloadException(
-                'Unable to JSON encode payload. Error ('.json_last_error().'): '.json_last_error_msg(), $value
+                'Unable to JSON encode payload. Error (' . json_last_error() . '): ' . json_last_error_msg(),
+                $value,
             );
         }
 
@@ -131,7 +140,7 @@ abstract class Queue implements QueueContract
     /**
      * Construit le tableau de payload (objet métier ou handler sous forme de chaîne).
      */
-    protected function createPayloadArray(string|object $job, string $queue, mixed $data = ''): array
+    protected function createPayloadArray(object|string $job, string $queue, mixed $data = ''): array
     {
         return is_object($job)
             ? $this->createObjectPayload($job, $queue)
@@ -146,20 +155,20 @@ abstract class Queue implements QueueContract
     protected function createObjectPayload(object $job, string $queue): array
     {
         $payload = $this->withCreatePayloadHooks($queue, [
-            'uuid' => (string) Uuid::v4(),
-            'displayName' => $this->getDisplayName($job),
-            'job' => 'BlitzPHP\Queue\CallQueuedHandler@call',
-            'maxTries' => $this->getJobTries($job),
-            'maxExceptions' => $job->maxExceptions ?? null,
-            'failOnTimeout' => $job->failOnTimeout ?? false,
-            'backoff' => $this->getJobBackoff($job),
-            'timeout' => $job->timeout ?? null,
-            'retryUntil' => $this->getJobExpiration($job),
+            'uuid'                    => (string) Uuid::v4(),
+            'displayName'             => $this->getDisplayName($job),
+            'job'                     => 'BlitzPHP\Queue\CallQueuedHandler@call',
+            'maxTries'                => $this->getJobTries($job),
+            'maxExceptions'           => $job->maxExceptions ?? null,
+            'failOnTimeout'           => $job->failOnTimeout ?? false,
+            'backoff'                 => $this->getJobBackoff($job),
+            'timeout'                 => $job->timeout ?? null,
+            'retryUntil'              => $this->getJobExpiration($job),
             'deleteWhenMissingModels' => $job->deleteWhenMissingModels ?? false,
-            'data' => [
+            'data'                    => [
                 'commandName' => $job,
-                'command' => $job,
-                'batchId' => $job->batchId ?? null,
+                'command'     => $job,
+                'batchId'     => $job->batchId ?? null,
             ],
             'createdAt' => Date::now()->getTimestamp(),
         ]);
@@ -170,16 +179,16 @@ abstract class Queue implements QueueContract
                 : serialize(clone $job);
         } catch (Throwable $e) {
             throw new RuntimeException(
-                sprintf('Failed to serialize job of type [%s]: %s', get_class($job), $e->getMessage()),
+                sprintf('Failed to serialize job of type [%s]: %s', $job::class, $e->getMessage()),
                 0,
-                $e
+                $e,
             );
         }
 
         return array_merge($payload, [
             'data' => array_merge($payload['data'], [
-                'commandName' => get_class($job),
-                'command' => $command,
+                'commandName' => $job::class,
+                'command'     => $command,
             ]),
         ]);
     }
@@ -191,7 +200,7 @@ abstract class Queue implements QueueContract
     {
         return method_exists($job, 'displayName')
             ? $job->displayName()
-            : get_class($job);
+            : $job::class;
     }
 
     /**
@@ -217,11 +226,11 @@ abstract class Queue implements QueueContract
 
         if (method_exists($job, 'backoff')) {
             $backoff = $job->backoff();
-        } else if (property_exists($job, 'backoff')) {
-			$backoff = $job->backoff ?? null;
-		}
+        } elseif (property_exists($job, 'backoff')) {
+            $backoff = $job->backoff ?? null;
+        }
 
-        if (is_null($backoff)) {
+        if (null === $backoff) {
             return null;
         }
 
@@ -260,16 +269,16 @@ abstract class Queue implements QueueContract
     protected function createStringPayload(string $job, string $queue, mixed $data): array
     {
         return $this->withCreatePayloadHooks($queue, [
-            'uuid' => (string) Uuid::v4(),
-            'displayName' => is_string($job) ? explode('@', $job)[0] : null,
-            'job' => $job,
-            'maxTries' => null,
+            'uuid'          => (string) Uuid::v4(),
+            'displayName'   => is_string($job) ? explode('@', $job)[0] : null,
+            'job'           => $job,
+            'maxTries'      => null,
             'maxExceptions' => null,
             'failOnTimeout' => false,
-            'backoff' => null,
-            'timeout' => null,
-            'data' => $data,
-            'createdAt' => Date::now()->getTimestamp(),
+            'backoff'       => null,
+            'timeout'       => null,
+            'data'          => $data,
+            'createdAt'     => Date::now()->getTimestamp(),
         ]);
     }
 
@@ -278,7 +287,7 @@ abstract class Queue implements QueueContract
      */
     public static function createPayloadUsing(?callable $callback = null): void
     {
-        if (is_null($callback)) {
+        if (null === $callback) {
             static::$createPayloadCallbacks = [];
         } else {
             static::$createPayloadCallbacks[] = $callback;
@@ -302,9 +311,9 @@ abstract class Queue implements QueueContract
     /**
      * Enfile un job via le callback fourni, après avoir émis les événements d'enfilement.
      */
-    protected function enqueueUsing(string|object $job, string $payload, ?string $queue, DateTimeInterface|DateInterval|int|null $delay, callable $callback): mixed
+    protected function enqueueUsing(object|string $job, string $payload, ?string $queue, DateInterval|DateTimeInterface|int|null $delay, callable $callback): mixed
     {
-		/*
+        /*
         if ($this->shouldDispatchAfterCommit($job) && $this->container->bound('db.transactions')) {
             if ($job->shouldBeUnique) {
                 $this->container->make('db.transactions')->addCallbackForRollback(
@@ -324,7 +333,7 @@ abstract class Queue implements QueueContract
                 }
             );
         }
-		*/
+        */
 
         $this->raiseJobQueueingEvent($queue, $job, $payload, $delay);
 
@@ -336,7 +345,7 @@ abstract class Queue implements QueueContract
     /**
      * Indique si le job doit attendre le commit des transactions SQL avant d'être envoyé.
      */
-    protected function shouldDispatchAfterCommit(string|object $job): bool
+    protected function shouldDispatchAfterCommit(object|string $job): bool
     {
         if (! $job instanceof Closure && is_object($job) && isset($job->afterCommit)) {
             return $job->afterCommit;
@@ -348,7 +357,7 @@ abstract class Queue implements QueueContract
     /**
      * Émet l'événement « job en cours d'enfilement ».
      */
-    protected function raiseJobQueueingEvent(?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
+    protected function raiseJobQueueingEvent(?string $queue, object|string $job, string $payload, DateInterval|DateTimeInterface|int|null $delay): void
     {
         $this->eventManager()->jobQueueing($this->connectionName, $queue, $job, $payload, $delay);
     }
@@ -356,7 +365,7 @@ abstract class Queue implements QueueContract
     /**
      * Émet l'événement « job enfilé ».
      */
-    protected function raiseJobQueuedEvent(?string $queue, string|int|null $jobId, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay)
+    protected function raiseJobQueuedEvent(?string $queue, int|string|null $jobId, object|string $job, string $payload, DateInterval|DateTimeInterface|int|null $delay)
     {
         $this->eventManager()->jobQueued($this->connectionName, $queue, $jobId, $job, $payload, $delay);
     }
@@ -369,7 +378,7 @@ abstract class Queue implements QueueContract
         if (! $this->eventManager) {
             $this->eventManager = new QueueEventManager($this->container->get(EventManagerInterface::class));
         }
-        
+
         return $this->eventManager;
     }
 

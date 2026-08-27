@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Traits;
 
 use ReflectionClass;
@@ -22,7 +31,7 @@ trait SerializesModels
         $reflectionClass = new ReflectionClass($this);
 
         [$class, $properties, $classLevelWithoutRelations] = [
-            get_class($this),
+            static::class,
             $reflectionClass->getProperties(),
             property_exists($this, 'withoutRelations') && $this->withoutRelations === true,
         ];
@@ -56,7 +65,8 @@ trait SerializesModels
 
             $values[$name] = $this->getSerializedPropertyValue(
                 $value,
-                ! $classLevelWithoutRelations);
+                ! $classLevelWithoutRelations,
+            );
         }
 
         return $values;
@@ -69,7 +79,7 @@ trait SerializesModels
     {
         $properties = (new ReflectionClass($this))->getProperties();
 
-        $class = get_class($this);
+        $class = static::class;
 
         foreach ($properties as $property) {
             if ($property->isStatic()) {
@@ -89,7 +99,8 @@ trait SerializesModels
             }
 
             $property->setValue(
-                $this, $this->getRestoredPropertyValue($values[$name])
+                $this,
+                $this->getRestoredPropertyValue($values[$name]),
             );
         }
     }

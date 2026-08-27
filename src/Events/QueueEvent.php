@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Events;
 
 use BlitzPHP\Contracts\Queue\Job;
@@ -11,10 +20,10 @@ use Throwable;
 /**
  * Événement du cycle de vie de la file d'attente (job, worker, connexion, opération).
  *
- * @property mixed      $job
- * @property ?int       $jobId
  * @property ?int       $attempts
  * @property ?Throwable $exception
+ * @property mixed      $job
+ * @property ?int       $jobId
  */
 class QueueEvent extends Event
 {
@@ -37,7 +46,7 @@ class QueueEvent extends Event
         private readonly array $metadata = [],
         ?Date $timestamp = null,
     ) {
-		parent::__construct($this->type);
+        parent::__construct($this->type);
 
         $this->timestamp = $timestamp ?? Date::now();
     }
@@ -176,9 +185,9 @@ class QueueEvent extends Event
      */
     public function hasFailed(): bool
     {
-		$job = $this->job;
+        $job = $this->job;
 
-		return $job instanceof Job ? $job->hasFailed() : $this->getException() !== null;
+        return $job instanceof Job ? $job->hasFailed() : $this->getException() !== null;
     }
 
     /**
@@ -187,11 +196,11 @@ class QueueEvent extends Event
     public function toArray(): array
     {
         return [
-            'type'      => $this->type,
-            'connection'   => $this->connection,
-            'queue'     => $this->queue,
-            'metadata'  => $this->metadata,
-            'timestamp' => $this->timestamp->toDateTimeString(),
+            'type'       => $this->type,
+            'connection' => $this->connection,
+            'queue'      => $this->queue,
+            'metadata'   => $this->metadata,
+            'timestamp'  => $this->timestamp->toDateTimeString(),
         ];
     }
 

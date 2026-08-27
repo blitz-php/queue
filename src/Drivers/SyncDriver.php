@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Drivers;
 
 use BlitzPHP\Contracts\Queue\Job;
@@ -32,7 +41,6 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     {
         return new self($config['after_commit'] ?? null);
     }
-
 
     /**
      * Retourne le nombre total de jobs dans la file.
@@ -71,7 +79,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
      */
     public function pendingJobs(?string $queue = null): Collection
     {
-        return new Collection;
+        return new Collection();
     }
 
     /**
@@ -79,7 +87,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
      */
     public function delayedJobs(?string $queue = null): Collection
     {
-        return new Collection;
+        return new Collection();
     }
 
     /**
@@ -87,7 +95,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
      */
     public function reservedJobs(?string $queue = null): Collection
     {
-        return new Collection;
+        return new Collection();
     }
 
     /**
@@ -103,7 +111,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
      *
      * @throws Throwable
      */
-    public function push(string|object $job, mixed $data = '', ?string $queue = null): mixed
+    public function push(object|string $job, mixed $data = '', ?string $queue = null): mixed
     {
         $job = $job instanceof Job ? $job->getJobId() : (string) $job;
 
@@ -218,7 +226,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Envoie un job dans la file après n secondes.
      */
-    public function later(DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = '', ?string $queue = null): mixed
+    public function later(DateInterval|DateTimeInterface|int $delay, object|string $job, mixed $data = '', ?string $queue = null): mixed
     {
         return $this->push($job, $data, $queue);
     }

@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -60,7 +69,7 @@ abstract class Job
     /**
      * Retourne l'identifiant du job.
      */
-    abstract public function getJobId() : string|int|null;
+    abstract public function getJobId(): int|string|null;
 
     /**
      * Retourne le corps brut (JSON) du job.
@@ -82,7 +91,6 @@ abstract class Job
     {
         $payload = $this->payload();
 
-        
         [$class, $method] = JobName::parse($payload['job']);
 
         ($this->instance = $this->resolve($class))->{$method}($this, $payload['data']);
@@ -168,7 +176,7 @@ abstract class Job
 
             $this->failed($e);
         } finally {
-			$this->resolve(QueueEventManager::class)->jobFailed($this->connectionName, $this, $e ?: new ManuallyFailedException);
+            $this->resolve(QueueEventManager::class)->jobFailed($this->connectionName, $this, $e ?: new ManuallyFailedException());
         }
     }
 
@@ -177,12 +185,12 @@ abstract class Job
      */
     protected function shouldRollBackDatabaseTransaction(Throwable $e): bool
     {
-		$config = config('queue.failed');
+        $config = config('queue.failed');
 
-        return $e instanceof TimeoutExceededException &&
-            $config['database'] &&
-			in_array($config['driver'], ['database', 'database-uuids']) &&
-			$this->container->bound(ConnectionResolverInterface::class);
+        return $e instanceof TimeoutExceededException
+            && $config['database']
+            && in_array($config['driver'], ['database', 'database-uuids'], true)
+            && $this->container->bound(ConnectionResolverInterface::class);
     }
 
     /**
@@ -250,7 +258,7 @@ abstract class Job
     /**
      * Secondes d'attente avant de relancer un job ayant levé une exception non gérée.
      *
-     * @return int|int[]|null
+     * @return int|list<int>|null
      */
     public function backoff()
     {

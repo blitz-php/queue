@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Commands;
 
 use BlitzPHP\Cache\Handlers\BaseHandler;
@@ -25,22 +34,32 @@ use Throwable;
 class Work extends Command
 {
     use InteractsWithTime;
-    
-    /** @var string Groupe auquel appartient la commande */
+
+    /**
+     * @var string Groupe auquel appartient la commande
+     */
     protected $group = 'Queue';
 
-    /** @var string Nom de la commande */
+    /**
+     * @var string Nom de la commande
+     */
     protected $name = 'queue:work';
 
-    /** @var string Description de la commande */
+    /**
+     * @var string Description de la commande
+     */
     protected $description = 'Traite les jobs de la file d\'attente en mode daemon';
 
-    /** @var array Arguments de la commande */
+    /**
+     * @var array Arguments de la commande
+     */
     protected $arguments = [
         'connection' => 'Nom de la connexion de file à traiter',
     ];
 
-    /** @var array Options de la commande */
+    /**
+     * @var array Options de la commande
+     */
     protected $options = [
         '--name'            => ['Nom du worker', 'default'],
         '--queue'           => ['Noms des files à traiter (séparés par des virgules)'],
@@ -74,7 +93,6 @@ class Work extends Command
      * Gestionnaire d'événements de l'application.
      */
     protected EventManagerInterface $events;
-
 
     /**
      * Horodatage de début du dernier job traité, s'il y en a un.
@@ -128,12 +146,13 @@ class Work extends Command
 
         if (! $this->outputUsingJson() && static::terminalHasSttyAvailable()) {
             $this->info(
-                sprintf('Processing jobs from the [%s] %s.', $queue, (new Stringable('queue'))->plural(explode(',', $queue)))
+                sprintf('Processing jobs from the [%s] %s.', $queue, (new Stringable('queue'))->plural(explode(',', $queue))),
             );
         }
 
         return $this->runWorker(
-            $connection, $queue
+            $connection,
+            $queue,
         );
     }
 
@@ -146,7 +165,9 @@ class Work extends Command
             ->setName($this->option('name'))
             ->setCache($this->cache)
             ->{$this->option('once') ? 'runNextJob' : 'daemon'}(
-                $connection, $queue, $this->gatherWorkerOptions()
+                $connection,
+                $queue,
+                $this->gatherWorkerOptions()
             );
     }
 
@@ -179,19 +200,19 @@ class Work extends Command
             return;
         }
 
-        $this->events->on(QueueEventManager::JOB_PROCESSING, function(QueueEvent $event) {
+        $this->events->on(QueueEventManager::JOB_PROCESSING, function (QueueEvent $event) {
             $this->writeOutput($event->job, 'starting');
         });
-        
-        $this->events->on(QueueEventManager::JOB_PROCESSED, function(QueueEvent $event) {
+
+        $this->events->on(QueueEventManager::JOB_PROCESSED, function (QueueEvent $event) {
             $this->writeOutput($event->job, 'success');
         });
 
-        $this->events->on(QueueEventManager::JOB_RELEASED_AFTER_EXCEPTION, function(QueueEvent $event) {
+        $this->events->on(QueueEventManager::JOB_RELEASED_AFTER_EXCEPTION, function (QueueEvent $event) {
             $this->writeOutput($event->job, 'released_after_exception');
         });
 
-        $this->events->on(QueueEventManager::JOB_FAILED, function(QueueEvent $event) {
+        $this->events->on(QueueEventManager::JOB_FAILED, function (QueueEvent $event) {
             $this->writeOutput($event->job, 'failed', $event->exception);
 
             $this->logFailedJob($event);
@@ -221,16 +242,18 @@ class Work extends Command
     {
         $isVerbose = $this->option('verbose');
 
-        $first = sprintf('%s %s %s', 
+        $first = sprintf(
+            '%s %s %s',
             $this->color->comment($this->now()->format('Y-m-d H:i:s')),
             $job->resolveName(),
-            ! $isVerbose ? '' : sprintf('%s %s', 
+            ! $isVerbose ? '' : sprintf(
+                '%s %s',
                 $this->color->comment($job->getJobId()),
-                $this->color->info($job->getConnectionName() . ' ' . $job->getQueue())
-            )
+                $this->color->info($job->getConnectionName() . ' ' . $job->getQueue()),
+            ),
         );
 
-        if ($status == 'starting') {
+        if ($status === 'starting') {
             $this->latestStartedAt = microtime(true);
 
             $second = $this->color->warn('RUNNING', ['bold' => 1]);
@@ -238,21 +261,23 @@ class Work extends Command
             $runTime = (microtime(true) - $this->latestStartedAt) * 1000;
             $runTime = (float) number_format($runTime, 2, '.', '');
 
-            $memory = $isVerbose ? round(memory_get_usage(true) / 1024 / 1024, 1).'MB' : '';
+            $memory = $isVerbose ? round(memory_get_usage(true) / 1024 / 1024, 1) . 'MB' : '';
 
-            $second = $this->color->comment("{$runTime} ms".($memory ? " {$memory}" : '') . " ");
+            $second = $this->color->comment("{$runTime} ms" . ($memory ? " {$memory}" : '') . ' ');
             $second .= match ($status) {
-                'success' => $this->color->ok('DONE', ['bold' => 1]),
+                'success'                  => $this->color->ok('DONE', ['bold' => 1]),
                 'released_after_exception' => $this->color->warn('FAIL', ['bold' => 1]),
-                default => $this->color->error('FAIL', ['bold' => 1]),
+                default                    => $this->color->error('FAIL', ['bold' => 1]),
             };
         }
-        
+
         $this->justify($first, $second);
     }
 
     /**
      * Affiche l'état du worker au format JSON.
+     *
+     * @param mixed $status
      */
     protected function writeOutputAsJson(Job $job, $status, ?Throwable $exception = null): void
     {
@@ -265,10 +290,10 @@ class Work extends Command
             'job'        => $job->resolveName(),
             'status'     => $status,
             'result'     => match (true) {
-                $job->isDeleted() => 'deleted',
+                $job->isDeleted()  => 'deleted',
                 $job->isReleased() => 'released',
-                $job->hasFailed() => 'failed',
-                default => '',
+                $job->hasFailed()  => 'failed',
+                default            => '',
             },
             'attempts'  => $job->attempts(),
             'exception' => $exception ? $exception::class : '',
@@ -308,7 +333,7 @@ class Work extends Command
             $event->connection,
             $event->job->getQueue(),
             $event->job->getRawBody(),
-            $event->exception
+            $event->exception,
         );
     }
 
@@ -318,7 +343,8 @@ class Work extends Command
     protected function getQueue(string $connection): string
     {
         return $this->option('queue') ?: config(
-            "queue.connections.{$connection}.queue", 'default'
+            "queue.connections.{$connection}.queue",
+            'default',
         );
     }
 
@@ -327,8 +353,8 @@ class Work extends Command
      */
     protected function downForMaintenance(): false
     {
-        return $this->option('force') 
-            ? false 
+        return $this->option('force')
+            ? false
             : config('app.maintenance.enable', false); // $this->laravel->isDownForMaintenance();
     }
 
@@ -353,7 +379,7 @@ class Work extends Command
      */
     protected function isSilent(): bool
     {
-        return $this->suppress || !is_cli();
+        return $this->suppress || ! is_cli();
     }
 
     /**
@@ -368,10 +394,10 @@ class Work extends Command
         }
 
         // Pas de vérification si shell_exec est désactivé
-        if (!\function_exists('shell_exec')) {
+        if (! \function_exists('shell_exec')) {
             return false;
         }
 
-        return self::$stty = (bool) @shell_exec('stty 2> '.('\\' === \DIRECTORY_SEPARATOR ? 'NUL' : '/dev/null'));
+        return self::$stty = (bool) @shell_exec('stty 2> ' . ('\\' === \DIRECTORY_SEPARATOR ? 'NUL' : '/dev/null'));
     }
 }

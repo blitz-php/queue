@@ -1,12 +1,20 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Events;
 
 use BlitzPHP\Contracts\Event\EventManagerInterface;
 use BlitzPHP\Contracts\Queue\Job;
-use BlitzPHP\Queue\Enums\WorkerStopReason;
 use BlitzPHP\Queue\DTO\WorkerOptions;
-use Closure;
+use BlitzPHP\Queue\Enums\WorkerStopReason;
 use DateInterval;
 use DateTimeInterface;
 use Throwable;
@@ -16,9 +24,10 @@ use Throwable;
  */
 class QueueEventManager
 {
-	/**
+    /**
      * Noms d'événements des opérations de file.
      */
+
     public const JOB_POPPING                    = 'queue.job.popping';
     public const JOB_POPPED                     = 'queue.job.popped';
     public const JOB_PUSHED                     = 'queue.job.pushed';
@@ -46,15 +55,15 @@ class QueueEventManager
     /**
      * @param EventManagerInterface $events Gestionnaire d'événements de l'application.
      */
-	public function __construct(protected EventManagerInterface $events)
-	{
-	}
+    public function __construct(protected EventManagerInterface $events)
+    {
+    }
 
-	/**
+    /**
      * Émet l'événement de tentative de job.
      */
     public function jobAttempted(string $connection, Job $job, ?Throwable $e = null): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_ATTEMPTED,
             connection: $connection,
@@ -63,11 +72,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement d'échec de job.
      */
     public function jobFailed(string $connection, Job $job, ?Throwable $e): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_FAILED,
             connection: $connection,
@@ -76,11 +85,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement d'exception survenue sur un job.
      */
     public function jobExceptionOccured(string $connection, Job $job, Throwable $e): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_EXCEPTION_OCCURED,
             connection: $connection,
@@ -89,36 +98,36 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de prélèvement imminent d'un job.
      */
     public function jobPopping(string $connection, ?string $queue = null): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_POPPING,
             connection: $connection,
             queue     : $queue,
-       ));
+        ));
     }
 
-	/**
+    /**
      * Émet l'événement de job prélevé.
      */
     public function jobPopped(string $connection, ?Job $job = null): void
-	{
+    {
         $this->events->emit(new QueueEvent(
-			type      : self::JOB_POPPED,
-			connection: $connection,
-			queue     : $job?->getQueue(),
-			metadata  : compact('job')
-       ));
+            type      : self::JOB_POPPED,
+            connection: $connection,
+            queue     : $job?->getQueue(),
+            metadata  : compact('job'),
+        ));
     }
 
-	/**
+    /**
      * Émet l'événement de traitement en cours.
      */
     public function jobProcessing(string $connection, Job $job): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_PROCESSING,
             connection: $connection,
@@ -127,11 +136,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de job traité.
      */
     public function jobProcessed(string $connection, Job $job): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_PROCESSED,
             connection: $connection,
@@ -140,11 +149,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement « job enfilé ».
      */
-    public function jobQueued(string $connection, ?string $queue, string|int|null $jobId, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
-	{
+    public function jobQueued(string $connection, ?string $queue, int|string|null $jobId, object|string $job, string $payload, DateInterval|DateTimeInterface|int|null $delay): void
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_QUEUED,
             connection: $connection,
@@ -153,11 +162,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement « job en cours d'enfilement ».
      */
-    public function jobQueueing(string $connection, ?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
-	{
+    public function jobQueueing(string $connection, ?string $queue, object|string $job, string $payload, DateInterval|DateTimeInterface|int|null $delay): void
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_QUEUEING,
             connection: $connection,
@@ -166,11 +175,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de relâchement après exception.
      */
     public function jobReleasedAfterException(string $connection, Job $job, int $backoff): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_RELEASED_AFTER_EXCEPTION,
             connection: $connection,
@@ -179,11 +188,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de dépassement de délai.
      */
     public function jobTimeout(string $connection, string $queue, Job $job, array $metadata = []): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::JOB_TIMEOUT,
             connection: $connection,
@@ -195,11 +204,11 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de file vidée.
      */
     public function queueCleared(string $connection, ?string $queue = null): void
-	{
+    {
         $this->events->emit(new QueueEvent(
             type      : self::QUEUE_CLEARED,
             connection: $connection,
@@ -207,89 +216,89 @@ class QueueEventManager
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de file en pause.
      */
-    public function queuePaused(string $connection, string $queue, DateTimeInterface|DateInterval|int|null  $ttl = null): void
-	{
+    public function queuePaused(string $connection, string $queue, DateInterval|DateTimeInterface|int|null $ttl = null): void
+    {
         $this->events->emit(new QueueEvent(
-			type      : self::QUEUE_PAUSED,
-			connection: $connection,
-			queue     : $queue,
-			metadata  : compact('ttl'),
+            type      : self::QUEUE_PAUSED,
+            connection: $connection,
+            queue     : $queue,
+            metadata  : compact('ttl'),
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de reprise de file.
      */
     public function queueResumed(string $connection, string $queue): void
-	{
-       	$this->events->emit(new QueueEvent(
-			type      : self::QUEUE_RESUMED,
-			connection: $connection,
-			queue     : $queue,
+    {
+        $this->events->emit(new QueueEvent(
+            type      : self::QUEUE_RESUMED,
+            connection: $connection,
+            queue     : $queue,
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de bascule (failover) vers une autre connexion.
      */
     public function queueFailedOver(string $connection, string $job, Throwable $e): void
-	{
-       	$this->events->emit(new QueueEvent(
+    {
+        $this->events->emit(new QueueEvent(
             type      : self::QUEUE_FAILED_OVER,
             connection: $connection,
             metadata  : compact('job', 'e'),
         ));
     }
 
-	/**
+    /**
      * Émet l'événement de démarrage du worker.
      */
     public function workerStarting(string $connection, string $queue, WorkerOptions $options): void
-	{
-		$this->events->emit(new QueueEvent(
-			type      : self::WORKER_STARTING,
-			connection: $connection,
-			queue     : $queue,
-			metadata  : compact('options')
-		));
+    {
+        $this->events->emit(new QueueEvent(
+            type      : self::WORKER_STARTING,
+            connection: $connection,
+            queue     : $queue,
+            metadata  : compact('options'),
+        ));
     }
 
     /**
      * Émet l'événement d'arrêt du worker.
      */
-	 public function workerStopping(string $connection, int $status, ?WorkerOptions $options = null, ?WorkerStopReason $reason = null): void
-	{
-		$this->events->emit(new QueueEvent(
-			type      : self::WORKER_STOPPING,
-			connection: $connection,
-			metadata  : compact('status', 'options', 'reason')
-		));
+    public function workerStopping(string $connection, int $status, ?WorkerOptions $options = null, ?WorkerStopReason $reason = null): void
+    {
+        $this->events->emit(new QueueEvent(
+            type      : self::WORKER_STOPPING,
+            connection: $connection,
+            metadata  : compact('status', 'options', 'reason'),
+        ));
     }
 
-	/**
+    /**
      * Émet l'événement de connexion de pilote établie.
      */
     public function handlerConnectionEstablished(string $connection, array $config = []): void
-	{
-		$this->events->emit(new QueueEvent(
-			type      : self::HANDLER_CONNECTION_ESTABLISHED,
-			connection: $connection,
-			metadata  : compact('config')
-		));
+    {
+        $this->events->emit(new QueueEvent(
+            type      : self::HANDLER_CONNECTION_ESTABLISHED,
+            connection: $connection,
+            metadata  : compact('config'),
+        ));
     }
 
     /**
      * Émet l'événement d'échec de connexion de pilote.
      */
     public function handlerConnectionFailed(string $connection, Throwable $exception, array $config = []): void
-	{
-		$this->events->emit(new QueueEvent(
-			type      : self::HANDLER_CONNECTION_FAILED,
-			connection: $connection,
-			metadata  : compact('config', 'exception')
-		));
+    {
+        $this->events->emit(new QueueEvent(
+            type      : self::HANDLER_CONNECTION_FAILED,
+            connection: $connection,
+            metadata  : compact('config', 'exception'),
+        ));
     }
 }

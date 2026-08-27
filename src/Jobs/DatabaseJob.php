@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -14,13 +23,13 @@ class DatabaseJob extends Job implements JobContract
     /**
      * Crée une nouvelle instance de job.
      *
-     * @param  DatabaseDriver  $database Instance du pilote base de données.
-     * @param  DatabaseJobRecord  $job Enregistrement / payload du job en base.
+     * @param DatabaseDriver    $database Instance du pilote base de données.
+     * @param DatabaseJobRecord $job      Enregistrement / payload du job en base.
      */
     public function __construct(ContainerInterface $container, protected DatabaseDriver $database, protected DatabaseJobRecord $job, string $connectionName, string $queue)
     {
-        $this->queue = $queue;
-        $this->container = $container;
+        $this->queue          = $queue;
+        $this->container      = $container;
         $this->connectionName = $connectionName;
     }
 

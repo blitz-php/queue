@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue;
 
 use BlitzPHP\Cache\Cache;
@@ -11,7 +20,6 @@ use BlitzPHP\Contracts\Queue\Monitor;
 use BlitzPHP\Contracts\Queue\Queue as QueueContract;
 use BlitzPHP\Queue\DTO\Config;
 use BlitzPHP\Queue\Events\QueueEventManager;
-use Closure;
 use DateInterval;
 use DateTimeInterface;
 use InvalidArgumentException;
@@ -37,7 +45,7 @@ class Manager implements Factory, Monitor
     /**
      * Gestionnaire d'événements de la file.
      */
-	protected QueueEventManager $queueEventManager;
+    protected QueueEventManager $queueEventManager;
 
     /**
      * Cache applicatif (pause / redémarrage des workers).
@@ -71,7 +79,7 @@ class Manager implements Factory, Monitor
      */
     public function after(callable $callback): void
     {
-		$this->events->on(QueueEventManager::JOB_PROCESSED, $callback);
+        $this->events->on(QueueEventManager::JOB_PROCESSED, $callback);
     }
 
     /**
@@ -79,7 +87,7 @@ class Manager implements Factory, Monitor
      */
     public function exceptionOccurred(callable $callback): void
     {
-		$this->events->on(QueueEventManager::JOB_EXCEPTION_OCCURED, $callback);
+        $this->events->on(QueueEventManager::JOB_EXCEPTION_OCCURED, $callback);
     }
 
     /**
@@ -87,7 +95,7 @@ class Manager implements Factory, Monitor
      */
     public function looping(callable $callback): void
     {
-		$this->events->on(QueueEventManager::JOB_LOOPING, $callback);
+        $this->events->on(QueueEventManager::JOB_LOOPING, $callback);
     }
 
     /**
@@ -103,7 +111,7 @@ class Manager implements Factory, Monitor
      */
     public function starting(callable $callback): void
     {
-		$this->events->on(QueueEventManager::WORKER_STARTING, $callback);
+        $this->events->on(QueueEventManager::WORKER_STARTING, $callback);
     }
 
     /**
@@ -111,25 +119,25 @@ class Manager implements Factory, Monitor
      */
     public function stopping(callable $callback): void
     {
-		$this->events->on(QueueEventManager::WORKER_STOPPING, $callback);
+        $this->events->on(QueueEventManager::WORKER_STOPPING, $callback);
     }
 
     /**
      * Retourne (et instancie si besoin) le gestionnaire d'événements de file.
      */
-	protected function queueEventManager(): QueueEventManager
-	{
-		if (! $this->queueEventManager) {
-			$this->queueEventManager = $this->container->get(QueueEventManager::class);
-		}
+    protected function queueEventManager(): QueueEventManager
+    {
+        if (! $this->queueEventManager) {
+            $this->queueEventManager = $this->container->get(QueueEventManager::class);
+        }
 
-		return $this->queueEventManager;
-	}
+        return $this->queueEventManager;
+    }
 
     /**
      * Indique si le pilote (connexion) donné est déjà résolu.
      */
-    public function connected(UnitEnum|string|null $name = null): bool
+    public function connected(string|UnitEnum|null $name = null): bool
     {
         $name = $name instanceof UnitEnum ? $name->name : ($name ?: $this->getDefaultDriver());
 
@@ -141,7 +149,7 @@ class Manager implements Factory, Monitor
      *
      * Les pilotes sont instanciés à la demande pour éviter les connexions inutiles.
      */
-    public function driver(UnitEnum|string|null $name = null): QueueContract
+    public function driver(string|UnitEnum|null $name = null): QueueContract
     {
         $name = $name instanceof UnitEnum ? $name->name : ($name ?: $this->getDefaultDriver());
 
@@ -180,21 +188,21 @@ class Manager implements Factory, Monitor
      */
     public function pause(string $connection, string $queue): void
     {
-		$this->cache->forever("blitzphp-queue-paused-{$connection}-{$queue}", true);
+        $this->cache->forever("blitzphp-queue-paused-{$connection}-{$queue}", true);
 
-		$this->queueEventManager()->queuePaused($connection, $queue);
+        $this->queueEventManager()->queuePaused($connection, $queue);
     }
 
     /**
      * Met une file en pause pendant une durée donnée.
      */
-    public function pauseFor(string $connection, string $queue, DateTimeInterface|DateInterval|int $ttl): void
+    public function pauseFor(string $connection, string $queue, DateInterval|DateTimeInterface|int $ttl): void
     {
-		$convertedTtl = $ttl instanceof DateTimeInterface ? $ttl->getTimestamp() : $ttl;
+        $convertedTtl = $ttl instanceof DateTimeInterface ? $ttl->getTimestamp() : $ttl;
 
-		$this->cache->set("blitzphp-queue-paused-{$connection}-{$queue}", true, $convertedTtl);
+        $this->cache->set("blitzphp-queue-paused-{$connection}-{$queue}", true, $convertedTtl);
 
-		$this->queueEventManager()->queuePaused($connection, $queue, $ttl);
+        $this->queueEventManager()->queuePaused($connection, $queue, $ttl);
     }
 
     /**
@@ -202,9 +210,9 @@ class Manager implements Factory, Monitor
      */
     public function resume(string $connection, string $queue): void
     {
-		$this->cache->delete("blitzphp-queue-paused-{$connection}-{$queue}");
+        $this->cache->delete("blitzphp-queue-paused-{$connection}-{$queue}");
 
-		$this->queueEventManager()->queueResumed($connection, $queue);
+        $this->queueEventManager()->queueResumed($connection, $queue);
     }
 
     /**
@@ -224,7 +232,7 @@ class Manager implements Factory, Monitor
     public function withoutInterruptionPolling(): void
     {
         Worker::$restartable = false;
-        Worker::$pausable = false;
+        Worker::$pausable    = false;
     }
 
     /**
@@ -234,13 +242,13 @@ class Manager implements Factory, Monitor
     {
         return $this->config->default;
     }
-	
-	/**
+
+    /**
      * Définit le nom de la connexion par défaut.
      */
     public function setDefaultDriver(string $name): void
     {
-		$this->config->setDefaultDriver($name);
+        $this->config->setDefaultDriver($name);
     }
 
     /**
@@ -278,6 +286,6 @@ class Manager implements Factory, Monitor
      */
     public function __call(string $method, array $parameters = []): mixed
     {
-        return $this->driver()->$method(...$parameters);
+        return $this->driver()->{$method}(...$parameters);
     }
 }

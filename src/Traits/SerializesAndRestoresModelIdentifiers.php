@@ -1,11 +1,22 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Traits;
 
 use BlitzPHP\Contracts\Queue\QueueableCollection;
 use BlitzPHP\Contracts\Queue\QueueableEntity;
 use BlitzPHP\Utilities\Iterable\Collection;
+use BlitzPHP\Wolke\Builder;
 use BlitzPHP\Wolke\Collection as WolkeCollection;
+use BlitzPHP\Wolke\Model;
 use BlitzPHP\Wolke\Relations\Concerns\AsPivot;
 use BlitzPHP\Wolke\Relations\Pivot;
 use Illuminate\Contracts\Database\ModelIdentifier;
@@ -25,20 +36,20 @@ trait SerializesAndRestoresModelIdentifiers
                 $value->getQueueableClass(),
                 $value->getQueueableIds(),
                 $withRelations ? $value->getQueueableRelations() : [],
-                $value->getQueueableConnection()
+                $value->getQueueableConnection(),
             ))->useCollectionClass(
-                ($collectionClass = get_class($value)) !== WolkeCollection;::class
+                ($collectionClass = $value::class) !== WolkeCollection::class
                     ? $collectionClass
-                    : null
+                    : null,
             );
         }
 
         if ($value instanceof QueueableEntity) {
             return new ModelIdentifier(
-                get_class($value),
+                $value::class,
                 $value->getQueueableId(),
                 $withRelations ? $value->getQueueableRelations() : [],
-                $value->getQueueableConnection()
+                $value->getQueueableConnection(),
             );
         }
 
@@ -62,7 +73,8 @@ trait SerializesAndRestoresModelIdentifiers
     /**
      * Restaure une collection enfilable.
      *
-     * @param  \Illuminate\Contracts\Database\ModelIdentifier  $value
+     * @param ModelIdentifier $value
+     *
      * @return WolkeCollection
      */
     protected function restoreCollection($value)
@@ -70,40 +82,43 @@ trait SerializesAndRestoresModelIdentifiers
         $class = $value->getClass();
 
         if (! $class || count($value->id) === 0) {
-            return ! is_null($value->collectionClass ?? null)
-                ? new $value->collectionClass
-                : new WolkeCollection;;
+            return null !== ($value->collectionClass ?? null)
+                ? new $value->collectionClass()
+                : new WolkeCollection();
         }
 
         $collection = $this->getQueryForModelRestoration(
-            (new $class)->setConnection($value->connection), $value->id
+            (new $class())->setConnection($value->connection),
+            $value->id,
         )->useWritePdo()->get();
 
-        if (is_a($class, Pivot::class, true) || in_array(AsPivot::class, class_uses($class))) {
+        if (is_a($class, Pivot::class, true) || in_array(AsPivot::class, class_uses($class), true)) {
             return $collection;
         }
 
         $collection = $collection->keyBy->getKey();
 
-        $collectionClass = get_class($collection);
+        $collectionClass = $collection::class;
 
         return (new $collectionClass(
             (new Collection($value->id))
                 ->map(fn ($id) => $collection[$id] ?? null)
-                ->filter()
+                ->filter(),
         ))->loadMissing($value->relations ?? []);
     }
 
     /**
      * Restaure le modèle à partir de son identifiant.
      *
-     * @param  \Illuminate\Contracts\Database\ModelIdentifier  $value
-     * @return \BlitzPHP\Wolke\Model
+     * @param ModelIdentifier $value
+     *
+     * @return Model
      */
     public function restoreModel($value)
     {
         return $this->getQueryForModelRestoration(
-            (new ($value->getClass()))->setConnection($value->connection), $value->id
+            (new ($value->getClass()))->setConnection($value->connection),
+            $value->id,
         )->useWritePdo()->firstOrFail()->loadMissing($value->relations ?? []);
     }
 
@@ -112,9 +127,9 @@ trait SerializesAndRestoresModelIdentifiers
      *
      * @template TModel of \BlitzPHP\Wolke\Model
      *
-     * @param  TModel  $model
-     * 
-     * @return \BlitzPHP\Wolke\Builder<TModel>
+     * @param TModel $model
+     *
+     * @return Builder<TModel>
      */
     protected function getQueryForModelRestoration($model, array|int $ids)
     {

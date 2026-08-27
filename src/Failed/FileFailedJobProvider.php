@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Failed;
 
 use BlitzPHP\Utilities\Date;
@@ -16,9 +25,9 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     /**
      * Crée un fournisseur de jobs échoués sur fichier.
      *
-     * @param  string  $path Chemin du fichier de stockage des jobs échoués.
-     * @param  int  $limit Nombre maximal de jobs échoués à conserver.
-     * @param  Closure|null  $lockProviderResolver Résolveur du fournisseur de verrous.
+     * @param string       $path                 Chemin du fichier de stockage des jobs échoués.
+     * @param int          $limit                Nombre maximal de jobs échoués à conserver.
+     * @param Closure|null $lockProviderResolver Résolveur du fournisseur de verrous.
      */
     public function __construct(protected string $path, protected int $limit = 100, protected ?Closure $lockProviderResolver = null)
     {
@@ -58,7 +67,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     public function ids(?string $queue = null): array
     {
         return (new Collection($this->all()))
-            ->when(! is_null($queue), fn ($collect) => $collect->where('queue', $queue))
+            ->when(null !== $queue, fn ($collect) => $collect->where('queue', $queue))
             ->pluck('id')
             ->all();
     }
@@ -83,7 +92,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     /**
      * Supprime un job échoué du stockage.
      */
-    public function forget(string|int $id): bool
+    public function forget(int|string $id): bool
     {
         return $this->lock(function () use ($id) {
             $this->write($pruned = (new Collection($jobs = $this->read()))
@@ -111,10 +120,11 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
         return $this->lock(function () use ($before) {
             $jobs = $this->read();
 
-            $this->write($prunedJobs = (new Collection($jobs))
-                ->reject(fn ($job) => $job->failed_at_timestamp <= $before->getTimestamp())
-                ->values()
-                ->all()
+            $this->write(
+                $prunedJobs = (new Collection($jobs))
+                    ->reject(fn ($job) => $job->failed_at_timestamp <= $before->getTimestamp())
+                    ->values()
+                    ->all(),
             );
 
             return count($jobs) - count($prunedJobs);
@@ -132,9 +142,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
 
         return ($this->lockProviderResolver)()
             ->lock('blitzphp-failed-jobs', 5)
-            ->block(10, function () use ($callback) {
-                return $callback();
-            });
+            ->block(10, fn () => $callback());
     }
 
     /**
@@ -164,7 +172,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     {
         file_put_contents(
             $this->path,
-            json_encode($jobs, JSON_PRETTY_PRINT)
+            json_encode($jobs, JSON_PRETTY_PRINT),
         );
     }
 

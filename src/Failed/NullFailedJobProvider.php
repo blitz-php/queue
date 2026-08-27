@@ -1,4 +1,14 @@
 <?php
+
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Failed;
 
 use Throwable;
@@ -11,7 +21,7 @@ class NullFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     /**
      * {@inheritDoc}
      */
-    public function log(string $connection, string $queue, string $payload, Throwable $exception): string|int|null
+    public function log(string $connection, string $queue, string $payload, Throwable $exception): int|string|null
     {
         return null;
     }
@@ -35,7 +45,7 @@ class NullFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     /**
      * {@inheritDoc}
      */
-    public function find(string|int $id): ?object
+    public function find(int|string $id): ?object
     {
         return null;
     }
@@ -43,7 +53,7 @@ class NullFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     /**
      * {@inheritDoc}
      */
-    public function forget(string|int $id): bool
+    public function forget(int|string $id): bool
     {
         return true;
     }

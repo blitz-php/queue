@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Failed;
 
 use BlitzPHP\Contracts\Database\ConnectionResolverInterface;
@@ -16,9 +25,9 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     /**
      * Crée un fournisseur de jobs échoués en base de données.
      *
-     * @param  ConnectionResolverInterface  $resolver Résolveur de connexions base de données.
-     * @param  string  $database Nom de la connexion base de données.
-     * @param  string  $table Nom de la table.
+     * @param ConnectionResolverInterface $resolver Résolveur de connexions base de données.
+     * @param string                      $database Nom de la connexion base de données.
+     * @param string                      $table    Nom de la table.
      */
     public function __construct(protected ConnectionResolverInterface $resolver, protected string $database, protected string $table)
     {
@@ -47,7 +56,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     public function ids(?string $queue = null): array
     {
         return $this->getTable()
-            ->when(! is_null($queue), fn ($query) => $query->where('queue', $queue))
+            ->when(null !== $queue, fn ($query) => $query->where('queue', $queue))
             ->orderBy('id', 'desc')
             ->values('uuid');
     }
@@ -70,7 +79,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     /**
      * Retourne un job échoué.
      */
-    public function find(string|int $id): ?object
+    public function find(int|string $id): ?object
     {
         if ($record = $this->getTable()->where('uuid', $id)->first()) {
             $record->id = $record->uuid;
@@ -83,7 +92,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     /**
      * Supprime un job échoué du stockage.
      */
-    public function forget(string|int $id): bool
+    public function forget(int|string $id): bool
     {
         return $this->getTable()->where('uuid', $id)->delete() > 0;
     }

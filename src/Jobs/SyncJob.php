@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -20,12 +29,12 @@ class SyncJob extends Job implements JobContract
     /**
      * Crée une nouvelle instance de job.
      *
-     * @param  string  $payload Données du message de file.
+     * @param string $payload Données du message de file.
      */
     public function __construct(ContainerInterface $container, protected string $payload, string $connectionName, string $queue)
     {
-        $this->queue = $queue;
-        $this->container = $container;
+        $this->queue          = $queue;
+        $this->container      = $container;
         $this->connectionName = $connectionName;
     }
 

@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Utilities\Date;
@@ -12,10 +21,10 @@ class InspectedJob
     /**
      * Crée une instance de job inspecté.
      *
-     * @param  string|null  $uuid  Identifiant unique du job.
-     * @param  string|null  $name  Nom d'affichage du job.
-     * @param  int  $attempts  Nombre de tentatives déjà effectuées.
-     * @param  Date|null  $createdAt  Date et heure de création du job.
+     * @param string|null $uuid      Identifiant unique du job.
+     * @param string|null $name      Nom d'affichage du job.
+     * @param int         $attempts  Nombre de tentatives déjà effectuées.
+     * @param Date|null   $createdAt Date et heure de création du job.
      */
     public function __construct(
         public readonly ?string $uuid,
@@ -28,8 +37,8 @@ class InspectedJob
     /**
      * Crée une instance à partir d'un payload JSON brut.
      *
-     * @param  string  $payload  Payload JSON brut du job.
-     * @param  int|null  $attempts  Nombre de tentatives déjà effectuées.
+     * @param string   $payload  Payload JSON brut du job.
+     * @param int|null $attempts Nombre de tentatives déjà effectuées.
      */
     public static function fromPayload(string $payload, ?int $attempts = null): static
     {

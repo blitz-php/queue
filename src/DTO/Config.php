@@ -1,4 +1,14 @@
 <?php
+
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\DTO;
 
 use BlitzPHP\Queue\Drivers\ConnectorInterface;
@@ -13,22 +23,22 @@ use InvalidArgumentException;
 class Config
 {
     /**
-     * @param string $default Le nom de la connexion par défaut
-     * @param array<string, array<string, mixed>> $connections Les configurations des connexions
-     * @param array<string, class-string<ConnectorInterface>> $drivers Les drivers disponibles
-     * @param bool $keep_failed_jobs Garder les jobs échoués
-     * @param array{driver: string, database: string, table: string} $failed Configuration des jobs échoués
-     * @param array{database: string, table: string} $batching Configuration du batching
-     * @param array<string, mixed> $raw Données brutes supplémentaires
+     * @param string                                                 $default          Le nom de la connexion par défaut
+     * @param array<string, array<string, mixed>>                    $connections      Les configurations des connexions
+     * @param array<string, class-string<ConnectorInterface>>        $drivers          Les drivers disponibles
+     * @param bool                                                   $keep_failed_jobs Garder les jobs échoués
+     * @param array{driver: string, database: string, table: string} $failed           Configuration des jobs échoués
+     * @param array{database: string, table: string}                 $batching         Configuration du batching
+     * @param array<string, mixed>                                   $raw              Données brutes supplémentaires
      */
     public function __construct(
         public string $default,
-        public  array $connections     = [],
-        public  array $drivers         = [],
-        public  bool $keep_failed_jobs = true,
-        public  array $failed          = [],
-        public  array $batching        = [],
-        private array $raw             = [],
+        public array $connections = [],
+        public array $drivers = [],
+        public bool $keep_failed_jobs = true,
+        public array $failed = [],
+        public array $batching = [],
+        private array $raw = [],
     ) {
     }
 
@@ -70,7 +80,7 @@ class Config
                 'failed'           => $this->failed,
                 'batching'         => $this->batching,
             ],
-            $this->raw
+            $this->raw,
         );
     }
 
@@ -86,10 +96,10 @@ class Config
     public function connection(?string $name): array
     {
         if ($name === null || $name === 'null') {
-			return ['driver' => 'null'];
+            return ['driver' => 'null'];
         }
 
-        if (!isset($this->connections[$name])) {
+        if (! isset($this->connections[$name])) {
             throw new InvalidArgumentException("The [{$name}] queue connection has not been configured.");
         }
 
@@ -105,7 +115,7 @@ class Config
      *
      * @throws InvalidArgumentException Si le pilote n'est pas enregistré ou n'implémente pas le contrat.
      */
-    public function driver(string $name): string 
+    public function driver(string $name): string
     {
         $driver = $this->drivers[$name] ?? null;
 
@@ -127,7 +137,7 @@ class Config
      */
     public function setDefaultDriver(string $name): void
     {
-		$this->default = $name;
+        $this->default = $name;
 
         config()->set('queue.default', $name);
     }

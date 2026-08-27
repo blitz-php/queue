@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Contracts\Queue\Job as JobContract;
@@ -28,7 +37,7 @@ class FakeJob extends Job implements JobContract
     /**
      * Exception ayant provoqué l'échec du job.
      *
-     * @var \Throwable
+     * @var Throwable
      */
     public $failedWith;
 
@@ -37,7 +46,7 @@ class FakeJob extends Job implements JobContract
      */
     public function getJobId(): string
     {
-		return (string) Text::uuid();
+        return (string) Text::uuid();
     }
 
     /**
@@ -51,9 +60,9 @@ class FakeJob extends Job implements JobContract
     /**
      * Relâche le job dans la file après n secondes.
      */
-    public function release(DateTimeInterface|DateInterval|int $delay = 0): void
+    public function release(DateInterval|DateTimeInterface|int $delay = 0): void
     {
-        $this->released = true;
+        $this->released     = true;
         $this->releaseDelay = $delay;
     }
 
@@ -78,7 +87,7 @@ class FakeJob extends Job implements JobContract
      */
     public function fail(?Throwable $e = null): void
     {
-        $this->failed = true;
+        $this->failed     = true;
         $this->failedWith = $e;
     }
 }

@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -16,12 +25,14 @@ use Throwable;
  */
 class CallQueuedClosure
 {
-    use Dispatchable, InteractsWithQueue, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use SerializesModels;
 
     /**
      * Instance de Closure sérialisable.
      *
-     * @var \Laravel\SerializableClosure\SerializableClosure
+     * @var SerializableClosure
      */
     public $closure;
 
@@ -79,7 +90,7 @@ class CallQueuedClosure
     /**
      * Traite l'échec du job.
      */
-    public function failed(Throwable $e):void
+    public function failed(Throwable $e): void
     {
         foreach ($this->failureCallbacks as $callback) {
             $callback($e);
@@ -97,9 +108,9 @@ class CallQueuedClosure
 
         $reflection = new ReflectionFunction($closure);
 
-        $prefix = is_null($this->name) ? '' : "{$this->name} - ";
+        $prefix = null === $this->name ? '' : "{$this->name} - ";
 
-        return $prefix.'Closure ('.basename($reflection->getFileName()).':'.$reflection->getStartLine().')';
+        return $prefix . 'Closure (' . basename($reflection->getFileName()) . ':' . $reflection->getStartLine() . ')';
     }
 
     /**

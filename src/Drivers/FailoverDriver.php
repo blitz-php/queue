@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Drivers;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -33,7 +42,7 @@ class FailoverDriver extends Queue implements QueueContract, ConnectorInterface
     {
     }
 
-	/**
+    /**
      * Établit une connexion de file d'attente.
      */
     public static function connect(ContainerInterface $container, array $config): QueueContract
@@ -130,7 +139,7 @@ class FailoverDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Envoie un job dans la file après n secondes.
      */
-    public function later(DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = '', ?string $queue = null): mixed
+    public function later(DateInterval|DateTimeInterface|int $delay, object|string $job, mixed $data = '', ?string $queue = null): mixed
     {
         return $this->attemptOnAllConnections(__FUNCTION__, func_get_args(), $job);
     }
@@ -145,7 +154,6 @@ class FailoverDriver extends Queue implements QueueContract, ConnectorInterface
 
     /**
      * Tente la méthode donnée sur toutes les connexions, dans l'ordre.
-     *
      *
      * @throws Throwable
      */
@@ -162,7 +170,7 @@ class FailoverDriver extends Queue implements QueueContract, ConnectorInterface
 
                     $failedQueues[] = $connection;
 
-                    if ($job !== null && ! in_array($connection, $this->failingQueues)) {
+                    if ($job !== null && ! in_array($connection, $this->failingQueues, true)) {
                         $this->events->queueFailedOver($connection, $job, $e);
                     }
                 }

@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Failed;
 
 use BlitzPHP\Contracts\Database\ConnectionResolverInterface;
@@ -16,9 +25,9 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
     /**
      * Crée un fournisseur de jobs échoués en base de données.
      *
-     * @param  ConnectionResolverInterface  $resolver Résolveur de connexions base de données.
-     * @param  string  $database Nom de la connexion base de données.
-     * @param  string  $table Nom de la table.
+     * @param ConnectionResolverInterface $resolver Résolveur de connexions base de données.
+     * @param string                      $database Nom de la connexion base de données.
+     * @param string                      $table    Nom de la table.
      */
     public function __construct(protected ConnectionResolverInterface $resolver, protected string $database, protected string $table)
     {
@@ -34,7 +43,11 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
         $exception = (string) mb_convert_encoding($exception, 'UTF-8');
 
         return $this->insertGetId(compact(
-            'connection', 'queue', 'payload', 'exception', 'failed_at'
+            'connection',
+            'queue',
+            'payload',
+            'exception',
+            'failed_at',
         ));
     }
 
@@ -44,7 +57,7 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
     public function ids(?string $queue = null): array
     {
         return $this->getTable()
-            ->when(! is_null($queue), fn ($query) => $query->where('queue', $queue))
+            ->when(null !== $queue, fn ($query) => $query->where('queue', $queue))
             ->orderBy('id', 'desc')
             ->values('id');
     }
@@ -60,7 +73,7 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
     /**
      * Retourne un job échoué.
      */
-    public function find(string|int $id): ?object
+    public function find(int|string $id): ?object
     {
         return $this->getTable()->where($this->whereId($id))->first();
     }
@@ -68,7 +81,7 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
     /**
      * Supprime un job échoué du stockage.
      */
-    public function forget(string|int $id): bool
+    public function forget(int|string $id): bool
     {
         return $this->getTable()->where($this->whereId($id))->delete() > 0;
     }
@@ -114,7 +127,7 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
 
     /**
      * Retourne un constructeur de requêtes pour la table.
-     * 
+     *
      * @return BaseBuilder
      */
     public function getTable()
@@ -125,9 +138,9 @@ class DatabaseFailedJobProvider implements CountableFailedJobProvider, FailedJob
     /**
      * Clause WHERE selon que l'identifiant est un UUID (32 caractères) ou un entier.
      *
-     * @return array<string, string|int>
+     * @return array<string, int|string>
      */
-    private function whereId(string|int $id): array
+    private function whereId(int|string $id): array
     {
         return [is_string($id) && strlen($id) === 32 ? 'uuid' : 'id' => $id];
     }

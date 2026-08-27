@@ -1,10 +1,22 @@
 <?php
+
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue;
 
+use __PHP_Incomplete_Class;
 use BlitzPHP\Contracts\Container\ContainerInterface;
 use BlitzPHP\Contracts\Queue\Job;
 use BlitzPHP\Contracts\Security\EncrypterInterface;
 use BlitzPHP\Queue\Exceptions\MaxAttemptsExceededException;
+use BlitzPHP\Queue\Failed\FailedJobProviderInterface;
 use BlitzPHP\Utilities\Helpers;
 use BlitzPHP\Wolke\Exceptions\ModelNotFoundException;
 use Exception;
@@ -32,9 +44,9 @@ class CallQueuedHandler
         try {
             // Récupérer la commande (le job utilisateur)
             $command = $this->getCommand($data);
-            
+
             // Vérifier si c'est une classe incomplète
-            if ($command instanceof \__PHP_Incomplete_Class) {
+            if ($command instanceof __PHP_Incomplete_Class) {
                 throw new Exception('Job is incomplete class: ' . json_encode($command));
             }
 
@@ -50,16 +62,16 @@ class CallQueuedHandler
             $this->executeCommand($command);
 
             // Si le job n'a pas été supprimé ou relâché, on le supprime
-            if (!$job->isDeletedOrReleased()) {
+            if (! $job->isDeletedOrReleased()) {
                 $job->delete();
             }
-
         } catch (ModelNotFoundException $e) {
             // Gérer le cas où un modèle n'est pas trouvé
             $this->handleModelNotFound($job, $e);
         } catch (Throwable $e) {
             // Gérer les autres exceptions
             $this->handleException($job, $data, $e);
+
             throw $e;
         }
     }
@@ -69,12 +81,12 @@ class CallQueuedHandler
      */
     protected function getCommand(array $data): mixed
     {
-        if (!isset($data['command'])) {
+        if (! isset($data['command'])) {
             throw new RuntimeException('Job data missing "command" key.');
         }
 
         // Si c'est déjà un objet (pour les jobs sync)
-        if (is_object($data['command']) && !is_string($data['command'])) {
+        if (is_object($data['command']) && ! is_string($data['command'])) {
             return $data['command'];
         }
 
@@ -92,7 +104,7 @@ class CallQueuedHandler
             if ($this->container->bound(EncrypterInterface::class)) {
                 try {
                     $decrypted = $this->container->get(EncrypterInterface::class)->decrypt($data['command']);
-                    $command = unserialize($decrypted);
+                    $command   = unserialize($decrypted);
                     if ($command !== false) {
                         return $command;
                     }
@@ -131,9 +143,9 @@ class CallQueuedHandler
     protected function usesInteractsWithQueue(object $instance): bool
     {
         $traits = Helpers::classUsesRecursive($instance);
-        
-        return isset($traits[Traits\InteractsWithQueue::class]) ||
-               isset($traits['BlitzPHP\\Queue\\Traits\\InteractsWithQueue']);
+
+        return isset($traits[Traits\InteractsWithQueue::class])
+               || isset($traits['BlitzPHP\\Queue\\Traits\\InteractsWithQueue']);
     }
 
     /**
@@ -144,23 +156,26 @@ class CallQueuedHandler
         // Si c'est un CallQueuedClosure
         if ($command instanceof CallQueuedClosure) {
             $command->handle($this->container);
+
             return;
         }
 
         // Si le job a une méthode handle() (cas standard)
         if (method_exists($command, 'handle')) {
             $this->container->call([$command, 'handle']);
+
             return;
         }
 
         // Si c'est callable (__invoke)
         if (is_callable($command)) {
             $this->container->call($command);
+
             return;
         }
 
         throw new RuntimeException(
-            'Job does not have a handle() method and is not callable: ' . get_class($command)
+            'Job does not have a handle() method and is not callable: ' . $command::class,
         );
     }
 
@@ -176,6 +191,7 @@ class CallQueuedHandler
 
         // Récupérer la commande pour les métadonnées
         $command = null;
+
         try {
             $command = $this->getCommand($data);
         } catch (Throwable $parseError) {
@@ -189,7 +205,7 @@ class CallQueuedHandler
         if ($attempts >= $maxTries) {
             // Marquer comme échoué
             $job->markAsFailed();
-            
+
             // Appeler la méthode failed du job si elle existe
             if ($command && method_exists($command, 'failed')) {
                 try {
@@ -201,12 +217,12 @@ class CallQueuedHandler
 
             // Logger l'échec
             logger()->error('Job failed after max attempts', [
-                'job' => $this->getJobName($command, $data),
-                'attempts' => $attempts,
+                'job'       => $this->getJobName($command, $data),
+                'attempts'  => $attempts,
                 'max_tries' => $maxTries,
-                'error' => $e->getMessage(),
-                'job_id' => $job->getJobId(),
-                'queue' => $job->getQueue(),
+                'error'     => $e->getMessage(),
+                'job_id'    => $job->getJobId(),
+                'queue'     => $job->getQueue(),
             ]);
 
             // Enregistrer dans le provider de jobs échoués
@@ -218,23 +234,23 @@ class CallQueuedHandler
             throw new MaxAttemptsExceededException(
                 'Job failed after ' . $maxTries . ' attempts: ' . $e->getMessage(),
                 0,
-                $e
+                $e,
             );
         }
 
         // Calculer le backoff
         $backoff = $this->calculateBackoff($command, $attempts);
-        
+
         // Relâcher le job avec backoff
         $job->release($backoff);
 
         logger()->warning('Job released for retry', [
-            'job' => $this->getJobName($command, $data),
+            'job'      => $this->getJobName($command, $data),
             'attempts' => $attempts,
-            'backoff' => $backoff,
-            'error' => $e->getMessage(),
-            'job_id' => $job->getJobId(),
-            'queue' => $job->getQueue(),
+            'backoff'  => $backoff,
+            'error'    => $e->getMessage(),
+            'job_id'   => $job->getJobId(),
+            'queue'    => $job->getQueue(),
         ]);
     }
 
@@ -288,7 +304,7 @@ class CallQueuedHandler
 
         // Si le backoff est 0, on utilise un backoff exponentiel
         if ($backoff === 0) {
-            $backoff = 60 * pow(2, $attempts - 1);
+            $backoff = 60 * 2 ** ($attempts - 1);
         }
 
         return $backoff;
@@ -300,7 +316,7 @@ class CallQueuedHandler
     protected function getJobName(?object $command, array $data): string
     {
         if ($command !== null) {
-            return get_class($command);
+            return $command::class;
         }
 
         return $data['commandName'] ?? $data['displayName'] ?? 'Unknown';
@@ -312,19 +328,19 @@ class CallQueuedHandler
     protected function logFailedJob(Job $job, Throwable $e): void
     {
         try {
-            $failedProvider = $this->container->get(\BlitzPHP\Queue\Failed\FailedJobProviderInterface::class);
-            
+            $failedProvider = $this->container->get(FailedJobProviderInterface::class);
+
             $failedProvider->log(
                 $job->getConnectionName(),
                 $job->getQueue(),
                 $job->getRawBody(),
-                $e
+                $e,
             );
         } catch (Throwable $logError) {
             // Ignorer les erreurs de logging
             logger()->error('Failed to log failed job', [
-                'error' => $logError->getMessage(),
-                'job_id' => $job->getJobId()
+                'error'  => $logError->getMessage(),
+                'job_id' => $job->getJobId(),
             ]);
         }
     }
@@ -335,15 +351,16 @@ class CallQueuedHandler
     protected function handleModelNotFound(Job $job, ModelNotFoundException $e): void
     {
         $payload = $job->payload();
-        
+
         // Vérifier si on doit supprimer le job quand les modèles sont manquants
         if (isset($payload['deleteWhenMissingModels']) && $payload['deleteWhenMissingModels']) {
             $job->delete();
             logger()->warning('Job deleted because model was not found', [
                 'job_id' => $job->getJobId(),
-                'queue' => $job->getQueue(),
-                'model' => $e->getModel(),
+                'queue'  => $job->getQueue(),
+                'model'  => $e->getModel(),
             ]);
+
             return;
         }
 
@@ -359,8 +376,8 @@ class CallQueuedHandler
     {
         try {
             $command = $this->getCommand($data);
-            
-            if ($command instanceof \__PHP_Incomplete_Class) {
+
+            if ($command instanceof __PHP_Incomplete_Class) {
                 return;
             }
 
@@ -374,11 +391,10 @@ class CallQueuedHandler
             }
 
             logger()->critical('Job permanently failed', [
-                'job' => $this->getJobName($command ?? null, $data),
-                'uuid' => $uuid,
+                'job'   => $this->getJobName($command ?? null, $data),
+                'uuid'  => $uuid,
                 'error' => $e->getMessage(),
             ]);
-
         } catch (Throwable $handledError) {
             // Ignorer les erreurs dans failed()
             logger()->error('Error in CallQueuedHandler::failed', [

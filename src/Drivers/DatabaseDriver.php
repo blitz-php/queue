@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Drivers;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
@@ -9,16 +18,16 @@ use BlitzPHP\Contracts\Queue\Job;
 use BlitzPHP\Contracts\Queue\Queue as QueueContract;
 use BlitzPHP\Exceptions\CriticalError;
 use BlitzPHP\Queue\Events\QueueEventManager;
-use BlitzPHP\Queue\Models\JobModel;
-use BlitzPHP\Queue\Queue;
 use BlitzPHP\Queue\Jobs\DatabaseJob;
 use BlitzPHP\Queue\Jobs\DatabaseJobRecord;
 use BlitzPHP\Queue\Jobs\InspectedJob;
+use BlitzPHP\Queue\Models\JobModel;
+use BlitzPHP\Queue\Queue;
 use BlitzPHP\Utilities\Iterable\Collection;
 use BlitzPHP\Utilities\String\Stringable;
 use BlitzPHP\Utilities\String\Text;
-use DateTimeInterface;
 use DateInterval;
+use DateTimeInterface;
 use Throwable;
 
 /**
@@ -29,21 +38,21 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Type de verrou mis en cache pour le prélèvement des jobs.
      *
-     * @var string|bool|null
+     * @var bool|string|null
      */
-    protected $lockForPopping = null;
+    protected $lockForPopping;
 
     /**
      * Crée une instance de file d'attente base de données.
-     * 
+     *
      * @param string $default Nom de la file par défaut.
      */
     public function __construct(protected JobModel $model, protected string $default = 'default', bool $dispatchAfterCommit = false)
-	{
+    {
         $this->dispatchAfterCommit = $dispatchAfterCommit;
     }
 
-	/**
+    /**
      * Établit une connexion de file d'attente.
      *
      * @param array<string, mixed> $config Configuration de la connexion.
@@ -51,29 +60,29 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     public static function connect(ContainerInterface $container, array $config): QueueContract
     {
         try {
-			$connection = service('database', $config['connection'] ?? null, $config['shared'] ?? true);
+            $connection = service('database', $config['connection'] ?? null, $config['shared'] ?? true);
 
-			$queue = new self(
-				new JobModel(
-					$config,
-					$container->get(ConnectionResolverInterface::class),
-					$connection,
-				),
+            $queue = new self(
+                new JobModel(
+                    $config,
+                    $container->get(ConnectionResolverInterface::class),
+                    $connection,
+                ),
                 $config['queue'],
-                $config['after_commit'] ?? false
-			);
+                $config['after_commit'] ?? false,
+            );
 
-			$container->get(QueueEventManager::class)->handlerConnectionEstablished(
+            $container->get(QueueEventManager::class)->handlerConnectionEstablished(
                 connection: $queue->getConnectionName(),
                 config: $config,
             );
 
-			return $queue;
+            return $queue;
         } catch (Throwable $e) {
-			$container->get(QueueEventManager::class)->handlerConnectionFailed(
+            $container->get(QueueEventManager::class)->handlerConnectionFailed(
                 connection: 'default',
                 config: $config,
-				exception: $e,
+                exception: $e,
             );
 
             throw new CriticalError('Queue: Database connection failed. ' . $e->getMessage());
@@ -141,7 +150,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
      */
     public function reservedJobs(?string $queue = null): Collection
     {
-        return  collect($this->model->reservedJobs($this->getQueue($queue)))
+        return collect($this->model->reservedJobs($this->getQueue($queue)))
             ->map(fn ($record) => InspectedJob::fromPayload($record->payload, $record->attempts));
     }
 
@@ -156,7 +165,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Envoie un nouveau job dans la file.
      */
-    public function push(string|object $job, mixed $data = '', ?string $queue = null): mixed
+    public function push(object|string $job, mixed $data = '', ?string $queue = null): mixed
     {
         return $this->enqueueUsing(
             $job,
@@ -178,7 +187,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Envoie un job dans la file après n secondes.
      */
-    public function later(DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = '', ?string $queue = null): mixed
+    public function later(DateInterval|DateTimeInterface|int $delay, object|string $job, mixed $data = '', ?string $queue = null): mixed
     {
         return $this->enqueueUsing(
             $job,
@@ -191,7 +200,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
 
     /**
      * Envoie un tableau de jobs dans la file.
-	 */
+     */
     public function bulk(array $jobs, mixed $data = '', ?string $queue = null): mixed
     {
         $queue = $this->getQueue($queue);
@@ -199,16 +208,14 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
         $now = $this->availableAt();
 
         $this->model->insert((new Collection((array) $jobs))->map(
-            function ($job) use ($queue, $data, $now) {
-                return $this->buildDatabaseRecord(
-                    $queue,
-                    $this->createPayload($job, $this->getQueue($queue), $data),
-                    isset($job->delay) ? $this->availableAt($job->delay) : $now,
-                );
-            }
+            fn ($job) => $this->buildDatabaseRecord(
+                $queue,
+                $this->createPayload($job, $this->getQueue($queue), $data),
+                isset($job->delay) ? $this->availableAt($job->delay) : $now,
+            ),
         )->all());
 
-		return null;
+        return null;
     }
 
     /**
@@ -222,13 +229,13 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Insère un payload brut en base avec un délai de n secondes.
      */
-    protected function pushToDatabase(?string $queue, string $payload, DateTimeInterface|DateInterval|int $delay = 0, int $attempts = 0): mixed
+    protected function pushToDatabase(?string $queue, string $payload, DateInterval|DateTimeInterface|int $delay = 0, int $attempts = 0): mixed
     {
         return $this->model->pushToDatabase($this->buildDatabaseRecord(
             $this->getQueue($queue),
             $payload,
             $this->availableAt($delay),
-            $attempts
+            $attempts,
         ));
     }
 
@@ -269,7 +276,11 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
             if ($jobRecord) {
                 try {
                     (new DatabaseJob(
-                        $this->container, $this, $jobRecord, $this->connectionName, $queue
+                        $this->container,
+                        $this,
+                        $jobRecord,
+                        $this->connectionName,
+                        $queue,
                     ))->fail($e);
                 } catch (Throwable) {
                     // Ignore et relance l'exception d'origine.
@@ -293,7 +304,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     /**
      * Retourne le verrou SQL nécessaire pour prélever le prochain job.
      *
-     * @return string|bool
+     * @return bool|string
      */
     protected function getLockForPopping()
     {
@@ -301,21 +312,21 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
             return $this->lockForPopping;
         }
 
-        $databaseEngine= $this->model->db()->getPlatform();
-        $databaseVersion= $this->model->db()->getVersion();
+        $databaseEngine  = $this->model->db()->getPlatform();
+        $databaseVersion = $this->model->db()->getVersion();
 
         if ((new Stringable($databaseVersion))->contains('MariaDB')) {
-            $databaseEngine = 'mariadb';
+            $databaseEngine  = 'mariadb';
             $databaseVersion = Text::before(Text::after($databaseVersion, '5.5.5-'), '-');
         } elseif ((new Stringable($databaseVersion))->contains(['vitess', 'PlanetScale'])) {
-            $databaseEngine = 'vitess';
+            $databaseEngine  = 'vitess';
             $databaseVersion = Text::before($databaseVersion, '-');
         }
 
-        if (($databaseEngine === 'mysql' && version_compare($databaseVersion, '8.0.1', '>=')) ||
-            ($databaseEngine === 'mariadb' && version_compare($databaseVersion, '10.6.0', '>=')) ||
-            ($databaseEngine === 'pgsql' && version_compare($databaseVersion, '9.5', '>=')) ||
-            ($databaseEngine === 'vitess' && version_compare($databaseVersion, '19.0', '>='))
+        if (($databaseEngine === 'mysql' && version_compare($databaseVersion, '8.0.1', '>='))
+            || ($databaseEngine === 'mariadb' && version_compare($databaseVersion, '10.6.0', '>='))
+            || ($databaseEngine === 'pgsql' && version_compare($databaseVersion, '9.5', '>='))
+            || ($databaseEngine === 'vitess' && version_compare($databaseVersion, '19.0', '>='))
         ) {
             return $this->lockForPopping = 'FOR UPDATE SKIP LOCKED';
         }
@@ -348,7 +359,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     {
         $this->model->where('id', $job->id)->update([
             'reserved_at' => $job->touch(),
-            'attempts' => $job->increment(),
+            'attempts'    => $job->increment(),
         ]);
 
         return $job;
@@ -370,9 +381,9 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     public function deleteAndRelease(string $queue, DatabaseJob $job, int $delay): void
     {
         $this->model->transaction(function () use ($queue, $job, $delay) {
-			$where = ['id' => $job->getJobId()];
+            $where = ['id' => $job->getJobId()];
 
-            if ($this->model/*->lockForUpdate()*/->where($where)->first()) {
+            if ($this->model/* ->lockForUpdate() */ ->where($where)->first()) {
                 $this->model->where($where)->delete();
             }
 

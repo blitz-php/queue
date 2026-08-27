@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Database\Migrations;
 
 use BlitzPHP\Database\Migration\Migration;
@@ -15,7 +24,7 @@ class CreateQueueTables extends Migration
      */
     public function up()
     {
-        $this->create(config('queue.connections.database.table', 'queue_jobs'), function(Structure $table) {
+        $this->create(config('queue.connections.database.table', 'queue_jobs'), function (Structure $table) {
             $table->bigIncrements('id');
             $table->string('queue')->index();
             $table->longText('payload');
@@ -27,7 +36,7 @@ class CreateQueueTables extends Migration
             return $table;
         });
 
-        $this->create(config('queue.failed.table', 'queue_failed_jobs'), function(Structure $table) {
+        $this->create(config('queue.failed.table', 'queue_failed_jobs'), function (Structure $table) {
             $table->id();
             $table->string('uuid')->unique();
             $table->text('connection');

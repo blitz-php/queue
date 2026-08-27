@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Models;
 
 use BlitzPHP\Contracts\Database\ConnectionInterface;
@@ -21,7 +30,7 @@ class JobModel extends Model
     /**
      * Format de stockage des dates (horodatage Unix).
      */
-    protected string $dateFormat    = 'int';
+    protected string $dateFormat = 'int';
 
     /**
      * Désactive les callbacks du modèle pendant les opérations de file.
@@ -34,22 +43,22 @@ class JobModel extends Model
     protected ?int $retryAfter = 60;
 
     /**
-     * @param array<string, mixed>                 $config   Configuration de la connexion `database`.
-     * @param ConnectionResolverInterface          $resolver Résolveur de connexions.
-     * @param ConnectionInterface                  $db       Connexion SQL utilisée.
+     * @param array<string, mixed>        $config   Configuration de la connexion `database`.
+     * @param ConnectionResolverInterface $resolver Résolveur de connexions.
+     * @param ConnectionInterface         $db       Connexion SQL utilisée.
      */
-	public function __construct(array $config, protected ConnectionResolverInterface $resolver, ConnectionInterface $db)
-	{
+    public function __construct(array $config, protected ConnectionResolverInterface $resolver, ConnectionInterface $db)
+    {
         assert($db instanceof BaseConnection);
-        
+
         $this->table      = $config['table'];
         $this->retryAfter = $config['retry_after'] ?? 60;
 
         // Désactive le mode transaction strict
         $db->transStrict(false);
-        
+
         parent::__construct($resolver, $db);
-	}
+    }
 
     /**
      * Retourne le nombre total de jobs dans la file.
@@ -79,7 +88,7 @@ class JobModel extends Model
     public function delayedSize(string $queue): int
     {
         return $this->builder()
-            ->where('queue', $$queue)
+            ->where('queue', ${$queue})
             ->where('available_at >', $this->currentTime())
             ->whereNull('reserved_at')
             ->count();
@@ -91,7 +100,7 @@ class JobModel extends Model
     public function reservedSize(string $queue): int
     {
         return $this->builder()
-            ->where('queue', $$queue)
+            ->where('queue', ${$queue})
             ->whereNotNull('reserved_at')
             ->count();
     }
@@ -149,7 +158,7 @@ class JobModel extends Model
      */
     public function pushToDatabase(array $data): mixed
     {
-		$this->builder()->insert($data);
+        $this->builder()->insert($data);
 
         return $this->db->lastId($this->table);
     }
@@ -178,13 +187,12 @@ class JobModel extends Model
     public function deleteReserved(string $queue, string $id): void
     {
         $this->db->transaction(function () use ($id) {
-            if ($this/*->lockForUpdate()*/->where('id', $id)->first()) {
+            if ($this/* ->lockForUpdate() */ ->where('id', $id)->first()) {
                 $this->where('id', $id)->delete();
             }
         });
     }
 
-    
     /**
      * Supprime tous les jobs de la file.
      */
@@ -192,7 +200,7 @@ class JobModel extends Model
     {
         $this->builder()->where('queue', $queue)->delete();
 
-		return true;
+        return true;
     }
 
     /**

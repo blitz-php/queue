@@ -1,4 +1,14 @@
 <?php
+
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Failed;
 
 use Throwable;
@@ -10,34 +20,32 @@ interface FailedJobProviderInterface
 {
     /**
      * Enregistre un job échoué dans le stockage.
-     *
-     * @return string|int|null
      */
-    public function log(string $connection, string $queue, string $payload, Throwable $exception): string|int|null;
+    public function log(string $connection, string $queue, string $payload, Throwable $exception): int|string|null;
 
     /**
      * Retourne les identifiants de tous les jobs échoués.
      *
-     * @return array<int, string|int>
+     * @return array<int, int|string>
      */
     public function ids(?string $queue = null): array;
 
     /**
      * Retourne la liste de tous les jobs échoués.
      *
-     * @return array<object>
+     * @return list<object>
      */
     public function all(): array;
 
     /**
      * Retourne un job échoué.
      */
-    public function find(string|int $id): ?object;
+    public function find(int|string $id): ?object;
 
     /**
      * Supprime un job échoué du stockage.
      */
-    public function forget(string|int $id): bool;
+    public function forget(int|string $id): bool;
 
     /**
      * Vide le stockage des jobs échoués.

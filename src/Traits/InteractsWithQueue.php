@@ -1,13 +1,22 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Traits;
 
-use DateTimeInterface;
 use BlitzPHP\Contracts\Queue\Job as JobContract;
 use BlitzPHP\Queue\Exceptions\ManuallyFailedException;
 use BlitzPHP\Queue\Jobs\FakeJob;
 use BlitzPHP\Traits\Support\InteractsWithTime;
 use DateInterval;
+use DateTimeInterface;
 use InvalidArgumentException;
 use PHPUnit\Framework\Assert as PHPUnit;
 use RuntimeException;
@@ -48,13 +57,13 @@ trait InteractsWithQueue
      *
      * @throws InvalidArgumentException
      */
-    public function fail(Throwable|string|null $exception = null): void
+    public function fail(string|Throwable|null $exception = null): void
     {
         if (is_string($exception)) {
             $exception = new ManuallyFailedException($exception);
         }
 
-        if ($exception instanceof Throwable || is_null($exception)) {
+        if ($exception instanceof Throwable || null === $exception) {
             if ($this->job) {
                 $this->job->fail($exception);
             }
@@ -66,7 +75,7 @@ trait InteractsWithQueue
     /**
      * Relâche le job dans la file après n secondes.
      */
-    public function release(DateTimeInterface|DateInterval|int $delay = 0): void
+    public function release(DateInterval|DateTimeInterface|int $delay = 0): void
     {
         $delay = $delay instanceof DateTimeInterface
             ? $this->secondsUntil($delay)
@@ -82,7 +91,7 @@ trait InteractsWithQueue
      */
     public function withFakeQueueInteractions(): self
     {
-        $this->job = new FakeJob;
+        $this->job = new FakeJob();
 
         return $this;
     }
@@ -135,7 +144,7 @@ trait InteractsWithQueue
     /**
      * Vérifie que le job a échoué manuellement avec une exception donnée.
      */
-    public function assertFailedWith(Throwable|string  $exception): self
+    public function assertFailedWith(string|Throwable $exception): self
     {
         $this->assertFailed();
 
@@ -194,7 +203,7 @@ trait InteractsWithQueue
     /**
      * Vérifie que le job a été relâché dans la file.
      */
-    public function assertReleased(DateTimeInterface|DateInterval|int|null $delay = null): self
+    public function assertReleased(DateInterval|DateTimeInterface|int|null $delay = null): self
     {
         $this->ensureQueueInteractionsHaveBeenFaked();
 
@@ -207,7 +216,7 @@ trait InteractsWithQueue
             'Job was expected to be released, but was not.'
         ); */
 
-        if (! is_null($delay)) {
+        if (null !== $delay) {
             /* PHPUnit::assertSame(
                 $delay,
                 $this->job->releaseDelay,

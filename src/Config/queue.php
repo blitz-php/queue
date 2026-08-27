@@ -1,6 +1,17 @@
 <?php
 
 /**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
+use BlitzPHP\Queue\Drivers\DatabaseDriver;
+
+/**
  * Configuration du composant de files d'attente (queue).
  *
  * Ce fichier définit la connexion utilisée par défaut, les paramètres de chaque
@@ -59,22 +70,22 @@ return [
              */
             'table' => env('queue.database.table', 'queue_jobs'),
 
-            /**
-             * Nom de la file logique par défaut pour cette connexion
-             * (colonne `queue` en base). Utilisé si `queue:work` n'en précise pas.
-             */
+        /**
+         * Nom de la file logique par défaut pour cette connexion
+         * (colonne `queue` en base). Utilisé si `queue:work` n'en précise pas.
+         */
             // 'queue' => 'default',
 
-            /**
-             * Délai en secondes au-delà duquel un job réservé est considéré
-             * comme expiré et peut être repris par un autre worker.
-             */
+        /**
+         * Délai en secondes au-delà duquel un job réservé est considéré
+         * comme expiré et peut être repris par un autre worker.
+         */
             // 'retry_after' => 60,
 
-            /**
-             * Si `true`, n'envoie le job qu'après le commit des transactions
-             * de base de données en cours.
-             */
+        /**
+         * Si `true`, n'envoie le job qu'après le commit des transactions
+         * de base de données en cours.
+         */
             // 'after_commit' => false,
         ],
 
@@ -203,7 +214,7 @@ return [
         /**
          * Pilote SQL : table `queue_jobs` (ou celle configurée).
          */
-        'database' => \BlitzPHP\Queue\Drivers\DatabaseDriver::class,
+        'database' => DatabaseDriver::class,
         // 'redis' => \BlitzPHP\Queue\Drivers\Redis::class,
         // 'predis' => \BlitzPHP\Queue\Drivers\Predis::class,
         // 'rabbitmq' => \BlitzPHP\Queue\Drivers\RabbitMQ::class,

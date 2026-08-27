@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue\Config;
 
 use BlitzPHP\Container\Services as BaseServices;
@@ -32,7 +41,7 @@ class Services extends BaseServices
 
         return static::$instances[Manager::class] = new Manager(
             static::container(),
-            Config::fromArray($config)    
+            Config::fromArray($config),
         );
     }
 
@@ -45,9 +54,7 @@ class Services extends BaseServices
             return static::$instances[Worker::class];
         }
 
-        $isDownForMaintenance = function () {
-            return (bool) static::config()->get('app.maintenance.enable', false);
-        };
+        $isDownForMaintenance = fn () => (bool) static::config()->get('app.maintenance.enable', false);
 
         $resetScope = function () {
             $logger = static::logger();
@@ -91,24 +98,23 @@ class Services extends BaseServices
 
         $config = $config === [] ? static::config()->get('queue.failed', []) : $config;
         $driver = $config['driver'] ?? 'null';
-                
-        return static::$instances[FailedJobProviderInterface::class] =match ($driver) {
+
+        return static::$instances[FailedJobProviderInterface::class] = match ($driver) {
             'database' => new DatabaseFailedJobProvider(
                 static::singleton(ConnectionResolverInterface::class),
                 $config['database'] ?? 'default',
-                $config['table'] ?? 'queue_failed_jobs'
+                $config['table'] ?? 'queue_failed_jobs',
             ),
             'database-uuids' => new DatabaseUuidFailedJobProvider(
                 static::singleton(ConnectionResolverInterface::class),
                 $config['database'] ?? 'default',
-                $config['table'] ?? 'queue_failed_jobs'
+                $config['table'] ?? 'queue_failed_jobs',
             ),
             'file' => new FileFailedJobProvider(
                 $config['path'] ?? storage_path('logs/failed_jobs.json'),
-                $config['limit'] ?? 100
+                $config['limit'] ?? 100,
             ),
-            default => new NullFailedJobProvider()
+            default => new NullFailedJobProvider(),
         };
     }
-    
 }

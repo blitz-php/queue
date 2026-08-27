@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * This file is part of BlitzPHP Queue.
+ *
+ * (c) 2026 Dimitri Sitchet Tomkeu <devcode.dst@gmail.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
 namespace BlitzPHP\Queue;
 
 use BlitzPHP\Queue\Traits\Dispatchable;
@@ -15,7 +24,9 @@ use BlitzPHP\Queue\Traits\SerializesModels;
  */
 abstract class Job
 {
-    use Dispatchable, InteractsWithQueue, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use SerializesModels;
 
     /**
      * Nombre maximal de tentatives avant échec définitif.
