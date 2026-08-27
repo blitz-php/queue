@@ -1,6 +1,6 @@
 <?php
 
-namespace BlitzPHP\Queue;
+namespace BlitzPHP\Queue\DTO;
 
 class WorkerOptions
 {

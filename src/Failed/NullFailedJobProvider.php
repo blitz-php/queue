@@ -1,0 +1,63 @@
+<?php
+namespace BlitzPHP\Queue\Failed;
+
+use Throwable;
+
+class NullFailedJobProvider implements CountableFailedJobProvider, FailedJobProviderInterface
+{
+    /**
+     * {@inheritDoc}
+     */
+    public function log(string $connection, string $queue, string $payload, Throwable $exception): string|int|null
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function ids(?string $queue = null): array
+    {
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function all(): array
+    {
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function find(string|int $id): ?object
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function forget(string|int $id): bool
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function flush(?int $hours = null): void
+    {
+        // Ne rien faire
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function count(?string $connection = null, ?string $queue = null): int
+    {
+        return 0;
+    }
+}

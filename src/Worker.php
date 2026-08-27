@@ -2,14 +2,15 @@
 
 namespace BlitzPHP\Queue;
 
-use BlitzPHP\Cache\Cache;
+use BlitzPHP\Contracts\Cache\CacheInterface;
 use BlitzPHP\Contracts\Queue\Job;
 use BlitzPHP\Contracts\Queue\Queue;
+use BlitzPHP\Queue\DTO\WorkerOptions;
 use BlitzPHP\Queue\Enums\WorkerStopReason;
 use BlitzPHP\Queue\Events\QueueEventManager;
 use BlitzPHP\Queue\Exceptions\MaxAttemptsExceededException;
 use BlitzPHP\Queue\Exceptions\TimeoutExceededException;
-use BlitzPHP\Utilities\DateTime\Date;
+use BlitzPHP\Utilities\Date;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 // use BlitzPHP\Database\DetectsLostConnections; // available only in blitz-php/database 1.1
 use Throwable;
@@ -31,7 +32,7 @@ class Worker
     /**
      * The cache repository implementation.
      */
-    protected Cache $cache;
+    protected CacheInterface $cache;
 
     /**
      * The exception handler instance.
@@ -152,7 +153,7 @@ class Worker
             // register the timeout handler and reset the alarm for this job so it is
             // not stuck in a frozen state forever. Then, we can fire off this job.
             $job = $this->getNextJob(
-                $this->manager->connection($connectionName), $queue
+                $this->manager->driver($connectionName), $queue
             );
 
             if ($supportsAsyncSignals) {
@@ -262,7 +263,7 @@ class Worker
     /**
      * Determine the exit code to stop the process if necessary.
      */
-    protected function stopIfNecessary(WorkerOptions $options, int $lastRestart, int $startTime = 0, int $jobsProcessed = 0, mixed $job = null): ?array
+    protected function stopIfNecessary(WorkerOptions $options, int $lastRestart, float|int $startTime = 0, int $jobsProcessed = 0, mixed $job = null): ?array
     {
         return match (true) {
             $this->lostConnection => [static::EXIT_SUCCESS, WorkerStopReason::LostConnection],
@@ -289,39 +290,41 @@ class Worker
         // from this method. If there is no job on the queue, we will "sleep" the worker
         // for the specified number of seconds, then keep processing jobs after sleep.
         if ($job) {
-            return $this->runJob($job, $connectionName, $options);
+            $this->runJob($job, $connectionName, $options);
+            
+            return;
         }
 
         $this->sleep($options->sleep);
     }
 
     /**
-     * Get the next job from the queue connection.
+     * Get the next job from the queue driver.
      */
-    protected function getNextJob(Queue $connection, string $queue): ?Job
+    protected function getNextJob(Queue $driver, string $queue): ?Job
     {
-        $popJobCallback = function ($queue, $index = 0) use ($connection) {
-            return $connection->pop($queue, $index);
+        $popJobCallback = function ($queue, $index = 0) use ($driver) {
+            return $driver->pop($queue, $index);
         };
 
-        $this->raiseBeforeJobPopEvent($connection->getConnectionName(), $queue);
+        $this->raiseBeforeJobPopEvent($driver->getConnectionName(), $queue);
 
         try {
             if (isset(static::$popCallbacks[$this->name ?? ''])) {
                 if (! is_null($job = (static::$popCallbacks[$this->name ?? ''])($popJobCallback, $queue))) {
-                    $this->raiseAfterJobPopEvent($connection->getConnectionName(), $job);
+                    $this->raiseAfterJobPopEvent($driver->getConnectionName(), $job);
                 }
 
                 return $job;
             }
 
             foreach (explode(',', $queue) as $index => $queue) {
-                if ($this->queuePaused($connection->getConnectionName(), $queue)) {
+                if ($this->queuePaused($driver->getConnectionName(), $queue)) {
                     continue;
                 }
 
                 if (! is_null($job = $popJobCallback($queue, $index))) {
-                    $this->raiseAfterJobPopEvent($connection->getConnectionName(), $job);
+                    $this->raiseAfterJobPopEvent($driver->getConnectionName(), $job);
 
                     return $job;
                 }
@@ -356,7 +359,7 @@ class Worker
     protected function runJob(Job $job, string $connectionName, WorkerOptions $options): void
     {
         try {
-            return $this->process($connectionName, $job, $options);
+            $this->process($connectionName, $job, $options);
         } catch (Throwable $e) {
             if (static::$reportJobExceptions) {
 				logger()->error($e->getMessage());
@@ -397,7 +400,9 @@ class Worker
             );
 
             if ($job->isDeleted()) {
-                return $this->raiseAfterJobEvent($connectionName, $job);
+                $this->raiseAfterJobEvent($connectionName, $job);
+                
+                return;
             }
 
             // Here we will fire off the job and let it process. We will catch any exceptions, so
@@ -507,12 +512,12 @@ class Worker
             return;
         }
 
-        if (! $this->cache->get('job-exceptions:'.$uuid)) {
-            $this->cache->set('job-exceptions:'.$uuid, 0, Date::now()->addDay()->getTimestamp());
+        if (! $this->cache->get('job-exceptions-'.$uuid)) {
+            $this->cache->set('job-exceptions-'.$uuid, 0, Date::now()->addDay()->getTimestamp());
         }
 
-        if ($maxExceptions <= $this->cache->increment('job-exceptions:'.$uuid)) {
-            $this->cache->delete('job-exceptions:'.$uuid);
+        if ($maxExceptions <= $this->cache->increment('job-exceptions-'.$uuid)) {
+            $this->cache->delete('job-exceptions-'.$uuid);
 
             $this->failJob($job, $e);
         }
@@ -621,7 +626,7 @@ class Worker
         }
 
         if ($this->cache) {
-            return (int) $this->cache->get('blitzphp:queue:restart');
+            return (int) $this->cache->get('blitzphp-queue-restart');
         }
 
 		return null;
@@ -712,7 +717,7 @@ class Worker
     /**
      * Set the cache repository implementation.
      */
-    public function setCache(Cache $cache): self
+    public function setCache(CacheInterface $cache): self
     {
         $this->cache = $cache;
 

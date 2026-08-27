@@ -7,7 +7,7 @@ return [
             'group' => env('queue.database.group', 'default'),
             'shared' => true,
             'skip_locked' => true,
-            'table' => env('queue.database.table', 'jobs'),
+            'table' => env('queue.database.table', 'queue_jobs'),
         ],
         'redis' => [
             'driver' => 'redis',
@@ -35,10 +35,10 @@ return [
     ],
 
     'drivers' => [
-        'database' => \BlitzPHP\Queue\Drivers\Database::class,
-        'redis' => \BlitzPHP\Queue\Drivers\Redis::class,
-        'predis' => \BlitzPHP\Queue\Drivers\Predis::class,
-        'rabbitmq' => \BlitzPHP\Queue\Drivers\RabbitMQ::class,
+        'database' => \BlitzPHP\Queue\Drivers\DatabaseDriver::class,
+        // 'redis' => \BlitzPHP\Queue\Drivers\Redis::class,
+        // 'predis' => \BlitzPHP\Queue\Drivers\Predis::class,
+        // 'rabbitmq' => \BlitzPHP\Queue\Drivers\RabbitMQ::class,
     ],
 
     'keep_failed_jobs' => true,
@@ -46,11 +46,11 @@ return [
     'failed' => [
         'driver' => env('queue.failed_driver', 'database-uuids'),
         'database' => env('db.connection', 'default'),
-        'table' => 'failed_jobs',
+        'table' => 'queue_failed_jobs',
     ],
 
     'batching' => [
         'database' => env('db.connection', 'default'),
-        'table' => 'job_batches',
+        'table' => 'queue.job_batches',
     ],
 ];

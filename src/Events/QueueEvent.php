@@ -5,16 +5,23 @@ namespace BlitzPHP\Queue\Events;
 use BlitzPHP\Contracts\Queue\Job;
 use BlitzPHP\Event\Event;
 use BlitzPHP\Utilities\Date;
+use BlitzPHP\Utilities\String\Text;
 use Throwable;
 
+/**
+ * @property mixed $job
+ * @property ?int $jobId
+ * @property ?int $attempts
+ * @property ?Throwable $exception
+ */
 class QueueEvent extends Event
 {
     private readonly Date $timestamp;
 
     public function __construct(
-        private readonly string $type,
-        private readonly string $connection,
-        private readonly ?string $queue = null,
+        public readonly string $type,
+        public readonly string $connection,
+        public readonly ?string $queue = null,
         private readonly array $metadata = [],
         ?Date $timestamp = null,
     ) {
@@ -24,33 +31,9 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get event type
-     */
-    public function getType(): string
-    {
-        return $this->type;
-    }
-
-    /**
-     * Get connection name
-     */
-    public function getConnection(): string
-    {
-        return $this->connection;
-    }
-
-    /**
-     * Get queue name
-     */
-    public function getQueue(): ?string
-    {
-        return $this->queue;
-    }
-
-    /**
      * Get timestamp
      */
-    public function getTimestamp(): Date
+    public function timestamp(): Date
     {
         return $this->timestamp;
     }
@@ -58,7 +41,7 @@ class QueueEvent extends Event
     /**
      * Get all metadata
      */
-    public function getAllMetadata(): array
+    public function allMetadata(): array
     {
         return $this->metadata;
     }
@@ -66,7 +49,7 @@ class QueueEvent extends Event
     /**
      * Get metadata value by key
      */
-    public function getMetadata(string $key, mixed $default = null): mixed
+    public function metadata(string $key, mixed $default = null): mixed
     {
         return $this->metadata[$key] ?? $default;
     }
@@ -106,26 +89,14 @@ class QueueEvent extends Event
         return str_starts_with($this->type, 'queue.connection.');
     }
 
-    // Job-related convenience methods (metadata-based)
-
     /**
      * Get job ID (for job events)
      */
     public function getJobId(): ?int
     {
-        $job = $this->getMetadata('job');
+        $job = $this->job;
 
-        return $job instanceof Job ? $job->getJobId() : $this->getMetadata('job_id');
-    }
-
-    /**
-     * Get job priority (for job events)
-     */
-    public function getPriority(): ?string
-    {
-        $job = $this->getMetadata('job');
-
-        return $job instanceof Job ? $job->priority : $this->getMetadata('priority');
+        return $job instanceof Job ? $job->getJobId() : $this->metadata('job_id');
     }
 
     /**
@@ -133,9 +104,9 @@ class QueueEvent extends Event
      */
     public function getAttempts(): ?int
     {
-        $job = $this->getMetadata('job');
+        $job = $this->job;
 
-        return $job instanceof Job ? $job->attempts() : $this->getMetadata('attempts');
+        return $job instanceof Job ? $job->attempts() : $this->metadata('attempts');
     }
 
     /**
@@ -143,9 +114,9 @@ class QueueEvent extends Event
      */
     public function getStatus(): ?int
     {
-        $job = $this->getMetadata('job');
+        $job = $this->job;
 
-        return $job instanceof Job ? $job->status : $this->getMetadata('status');
+        return $job instanceof Job ? $job->status : $this->metadata('status');
     }
 
     /**
@@ -153,7 +124,7 @@ class QueueEvent extends Event
      */
     public function getJobClass(): ?string
     {
-        return $this->getMetadata('job_class');
+        return $this->metadata('job_class');
     }
 
     /**
@@ -161,7 +132,7 @@ class QueueEvent extends Event
      */
     public function getProcessingTime(): float
     {
-        return (float) $this->getMetadata('processing_time', 0.0);
+        return (float) $this->metadata('processing_time', 0.0);
     }
 
     /**
@@ -177,7 +148,7 @@ class QueueEvent extends Event
      */
     public function getException(): ?Throwable
     {
-        return $this->getMetadata('exception');
+        return $this->metadata('exception') ?? $this->metadata('e');
     }
 
     /**
@@ -185,9 +156,7 @@ class QueueEvent extends Event
      */
     public function getExceptionMessage(): ?string
     {
-        $exception = $this->getException();
-
-        return $exception?->getMessage();
+        return $this->getException()?->getMessage();
     }
 
     /**
@@ -195,7 +164,7 @@ class QueueEvent extends Event
      */
     public function hasFailed(): bool
     {
-		$job = $this->getMetadata('job');
+		$job = $this->job;
 
 		return $job instanceof Job ? $job->hasFailed() : $this->getException() !== null;
     }
@@ -212,5 +181,14 @@ class QueueEvent extends Event
             'metadata'  => $this->metadata,
             'timestamp' => $this->timestamp->toDateTimeString(),
         ];
+    }
+
+    public function __get(string $name): mixed
+    {
+        if (method_exists($this, $method = 'get' . Text::camel($name))) {
+            return $this->{$method}();
+        }
+
+        return $this->metadata($name);
     }
 }

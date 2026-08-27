@@ -3,18 +3,17 @@
 namespace BlitzPHP\Queue;
 
 use BlitzPHP\Contracts\Container\ContainerInterface;
+use BlitzPHP\Queue\Traits\Dispatchable;
+use BlitzPHP\Queue\Traits\InteractsWithQueue;
+use BlitzPHP\Queue\Traits\SerializesModels;
 use Closure;
-use Illuminate\Bus\Batchable;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
 use Laravel\SerializableClosure\SerializableClosure;
 use ReflectionFunction;
 use Throwable;
 
-class CallQueuedClosure implements ShouldQueue
+class CallQueuedClosure
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, SerializesModels;
 
     /**
      * The serializable Closure instance.

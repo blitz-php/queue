@@ -5,7 +5,7 @@ namespace BlitzPHP\Queue\Events;
 use BlitzPHP\Contracts\Event\EventManagerInterface;
 use BlitzPHP\Contracts\Queue\Job;
 use BlitzPHP\Queue\Enums\WorkerStopReason;
-use BlitzPHP\Queue\WorkerOptions;
+use BlitzPHP\Queue\DTO\WorkerOptions;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
@@ -27,13 +27,14 @@ class QueueEventManager
     public const JOB_LOOPING                    = 'queue.job.looping';
     public const JOB_RELEASED_AFTER_EXCEPTION   = 'queue.job.release-after-exception';
     public const JOB_TIMEOUT                    = 'queue.job.timeout';
-    public const JOB_QUEUED                    = 'queue.job.queued';
-    public const JOB_QUEUEING                    = 'queue.job.queuing';
+    public const JOB_QUEUED                     = 'queue.job.queued';
+    public const JOB_QUEUEING                   = 'queue.job.queuing';
     public const QUEUE_CLEARED                  = 'queue.cleared';
     public const QUEUE_PAUSED                   = 'queue.paused';
     public const QUEUE_RESUMED                  = 'queue.resumed';
-    public const WORKER_STARTING                 = 'queue.worker.starting';
-    public const WORKER_STOPPING                 = 'queue.worker.stopping';
+    public const QUEUE_FAILED_OVER              = 'queue.failed-over';
+    public const WORKER_STARTING                = 'queue.worker.starting';
+    public const WORKER_STOPPING                = 'queue.worker.stopping';
     public const HANDLER_CONNECTION_FAILED      = 'queue.handler.connection.failed';
     public const HANDLER_CONNECTION_ESTABLISHED = 'queue.handler.connection.established';
 
@@ -147,7 +148,7 @@ class QueueEventManager
 	/**
      * Emit job processed event
      */
-    public function jobQueuing(string $connection, ?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
+    public function jobQueueing(string $connection, ?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
 	{
         $this->events->emit(new QueueEvent(
             type      : self::JOB_QUEUEING,
@@ -224,6 +225,18 @@ class QueueEventManager
     }
 
 	/**
+     * Emit queue resumed event
+     */
+    public function queueFailedOver(string $connection, string $job, Throwable $e): void
+	{
+       	$this->events->emit(new QueueEvent(
+            type      : self::QUEUE_FAILED_OVER,
+            connection: $connection,
+            metadata  : compact('job', 'e'),
+        ));
+    }
+
+	/**
      * Emit worker started event
      */
     public function workerStarting(string $connection, string $queue, WorkerOptions $options): void
@@ -245,6 +258,30 @@ class QueueEventManager
 			type      : self::WORKER_STOPPING,
 			connection: $connection,
 			metadata  : compact('status', 'options', 'reason')
+		));
+    }
+
+	/**
+     * Emit handler connection established event
+     */
+    public function handlerConnectionEstablished(string $connection, array $config = []): void
+	{
+		$this->events->emit(new QueueEvent(
+			type      : self::HANDLER_CONNECTION_ESTABLISHED,
+			connection: $connection,
+			metadata  : compact('config')
+		));
+    }
+
+    /**
+     * Emit handler connection failed event
+     */
+    public function handlerConnectionFailed(string $connection, Throwable $exception, array $config = []): void
+	{
+		$this->events->emit(new QueueEvent(
+			type      : self::HANDLER_CONNECTION_FAILED,
+			connection: $connection,
+			metadata  : compact('config', 'exception')
 		));
     }
 }

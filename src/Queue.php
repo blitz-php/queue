@@ -10,9 +10,10 @@ use BlitzPHP\Contracts\Security\EncrypterInterface;
 use BlitzPHP\Queue\Events\QueueEventManager;
 use BlitzPHP\Queue\Exceptions\InvalidPayloadException;
 use BlitzPHP\Traits\Support\InteractsWithTime;
-use BlitzPHP\Utilities\DateTime\Date;
+use BlitzPHP\Utilities\Date;
 use BlitzPHP\Utilities\Iterable\Collection;
 use BlitzPHP\Utilities\String\Text;
+use BlitzPHP\Utilities\String\Uuid;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
@@ -27,11 +28,16 @@ abstract class Queue implements QueueContract
      * The IoC container instance.
      */
     protected ContainerInterface $container;
+    
+    /**
+     * The Queue Event Manager instance.
+     */
+    protected ?QueueEventManager $eventManager = null;
 
     /**
      * The connection name for the queue.
      */
-    protected string $connectionName;
+    protected string $connectionName = '';
 
     /**
      * The original configuration for the queue.
@@ -53,7 +59,7 @@ abstract class Queue implements QueueContract
     /**
      * Push a new job onto the queue.
      */
-    public function pushOn(string $queue, string|Job $job, mixed $data = ''): mixed
+    public function pushOn(string $queue, string|object $job, mixed $data = ''): mixed
     {
         return $this->push($job, $data, $queue);
     }
@@ -61,7 +67,7 @@ abstract class Queue implements QueueContract
     /**
      * Push a new job onto a specific queue after (n) seconds.
      */
-    public function laterOn(string $queue, DateTimeInterface|DateInterval|int $delay, string|Job $job, mixed $data = ''): mixed
+    public function laterOn(string $queue, DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = ''): mixed
     {
         return $this->later($delay, $job, $data, $queue);
     }
@@ -78,6 +84,14 @@ abstract class Queue implements QueueContract
         foreach ($jobs as $job) {
             $this->push($job, $data, $queue);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function clear(string $queue): bool
+    {
+        return true;
     }
 
 	/**
@@ -127,7 +141,7 @@ abstract class Queue implements QueueContract
     protected function createObjectPayload(object $job, string $queue): array
     {
         $payload = $this->withCreatePayloadHooks($queue, [
-            'uuid' => (string) Text::uuid(),
+            'uuid' => (string) Uuid::v4(),
             'displayName' => $this->getDisplayName($job),
             'job' => 'BlitzPHP\Queue\CallQueuedHandler@call',
             'maxTries' => $this->getJobTries($job),
@@ -241,7 +255,7 @@ abstract class Queue implements QueueContract
     protected function createStringPayload(string $job, string $queue, mixed $data): array
     {
         return $this->withCreatePayloadHooks($queue, [
-            'uuid' => (string) Text::uuid(),
+            'uuid' => (string) Uuid::v4(),
             'displayName' => is_string($job) ? explode('@', $job)[0] : null,
             'job' => $job,
             'maxTries' => null,
@@ -329,13 +343,9 @@ abstract class Queue implements QueueContract
     /**
      * Raise the job queueing event.
      */
-    protected function raiseJobQueueingEvent(string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
+    protected function raiseJobQueueingEvent(?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
     {
-        if ($this->container->bound(EventManagerInterface::class)) {
-            $delay = ! is_null($delay) ? $this->secondsUntil($delay) : $delay;
-
-			$this->container->get(QueueEventManager::class)->jobQueueing($this->connectionName, $queue, $job, $payload, $delay);
-        }
+        $this->eventManager()->jobQueueing($this->connectionName, $queue, $job, $payload, $delay);
     }
 
     /**
@@ -343,11 +353,16 @@ abstract class Queue implements QueueContract
      */
     protected function raiseJobQueuedEvent(?string $queue, string|int|null $jobId, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay)
     {
-        if ($this->container->bound(EventManagerInterface::class)) {
-            $delay = ! is_null($delay) ? $this->secondsUntil($delay) : $delay;
+        $this->eventManager()->jobQueued($this->connectionName, $queue, $jobId, $job, $payload, $delay);
+    }
 
-			$this->container->get(QueueEventManager::class)->jobQueued($this->connectionName, $queue, $jobId, $job, $payload, $delay);
+    protected function eventManager(): QueueEventManager
+    {
+        if (! $this->eventManager) {
+            $this->eventManager = new QueueEventManager($this->container->get(EventManagerInterface::class));
         }
+        
+        return $this->eventManager;
     }
 
     /**

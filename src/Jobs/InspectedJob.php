@@ -2,7 +2,7 @@
 
 namespace BlitzPHP\Queue\Jobs;
 
-use BlitzPHP\Utilities\DateTime\Date;
+use BlitzPHP\Utilities\Date;
 
 class InspectedJob
 {

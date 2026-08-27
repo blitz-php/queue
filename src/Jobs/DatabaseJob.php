@@ -52,9 +52,9 @@ class DatabaseJob extends Job implements JobContract
     /**
      * Get the job identifier.
      */
-    public function getJobId(): string|int
+    public function getJobId(): string
     {
-        return $this->job->id;
+        return (string) $this->job->id;
     }
 
     /**

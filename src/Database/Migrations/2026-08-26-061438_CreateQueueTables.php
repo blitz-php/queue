@@ -1,0 +1,42 @@
+<?php
+
+namespace BlitzPHP\Queue\Database\Migrations;
+
+use BlitzPHP\Database\Migration\Migration;
+use BlitzPHP\Database\Migration\Structure;
+
+class CreateQueueTables extends Migration
+{
+    public function up()
+    {
+        $this->create(config('queue.connections.database.table', 'queue_jobs'), function(Structure $table) {
+            $table->bigIncrements('id');
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+
+            return $table;
+        });
+
+        $this->create(config('queue.failed.table', 'queue_failed_jobs'), function(Structure $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+
+            return $table;
+        });
+    }
+
+    public function down()
+    {
+        $this->dropIfExists(config('queue.connections.database.table', 'queue_jobs'));
+        $this->dropIfExists(config('queue.failed.table', 'queue_failed_jobs'));
+    }
+}

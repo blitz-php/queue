@@ -3,14 +3,14 @@
 namespace BlitzPHP\Queue;
 
 use BlitzPHP\Cache\Cache;
+use BlitzPHP\Contracts\Cache\CacheInterface;
 use BlitzPHP\Contracts\Container\ContainerInterface;
 use BlitzPHP\Contracts\Event\EventManagerInterface;
 use BlitzPHP\Contracts\Queue\Factory;
 use BlitzPHP\Contracts\Queue\Monitor;
 use BlitzPHP\Contracts\Queue\Queue as QueueContract;
-use BlitzPHP\Queue\Drivers\ConnectorInterface;
+use BlitzPHP\Queue\DTO\Config;
 use BlitzPHP\Queue\Events\QueueEventManager;
-use BlitzPHP\Utilities\Helpers;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
@@ -23,24 +23,25 @@ use UnitEnum;
 class Manager implements Factory, Monitor
 {
     /**
-     * The array of resolved queue connections.
+     * The array of resolved queue drivers.
 	 *
 	 * @var array<string, Queue>
      */
-    protected array $connections = [];
-
-    /**
-     * The array of resolved queue connectors.
-     */
-    protected array $connectors = [];
+    protected array $drivers = [];
 
 	protected QueueEventManager $queueEventManager;
+
+    protected Cache $cache;
+
+    protected EventManagerInterface $events;
 
     /**
      * Create a new queue manager instance.
      */
-    public function __construct(protected ContainerInterface $container)
+    public function __construct(protected ContainerInterface $container, protected Config $config)
     {
+        $this->cache  = $container->get(CacheInterface::class);
+        $this->events = $container->get(EventManagerInterface::class);
     }
 
     /**
@@ -48,10 +49,7 @@ class Manager implements Factory, Monitor
      */
     public function before(callable $callback): void
     {
-		$this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::JOB_PROCESSING,
-			$callback
-		);
+        $this->events->on(QueueEventManager::JOB_PROCESSING, $callback);
     }
 
     /**
@@ -59,10 +57,7 @@ class Manager implements Factory, Monitor
      */
     public function after(callable $callback): void
     {
-		$this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::JOB_PROCESSED,
-			$callback
-		);
+		$this->events->on(QueueEventManager::JOB_PROCESSED, $callback);
     }
 
     /**
@@ -70,10 +65,7 @@ class Manager implements Factory, Monitor
      */
     public function exceptionOccurred(callable $callback): void
     {
-		$this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::JOB_EXCEPTION_OCCURED,
-			$callback
-		);
+		$this->events->on(QueueEventManager::JOB_EXCEPTION_OCCURED, $callback);
     }
 
     /**
@@ -81,10 +73,7 @@ class Manager implements Factory, Monitor
      */
     public function looping(callable $callback): void
     {
-		$this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::JOB_LOOPING,
-			$callback
-		);
+		$this->events->on(QueueEventManager::JOB_LOOPING, $callback);
     }
 
     /**
@@ -92,10 +81,7 @@ class Manager implements Factory, Monitor
      */
     public function failing(callable $callback): void
     {
-        $this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::JOB_FAILED,
-			$callback
-		);
+        $this->events->on(QueueEventManager::JOB_FAILED, $callback);
     }
 
     /**
@@ -103,10 +89,7 @@ class Manager implements Factory, Monitor
      */
     public function starting(callable $callback): void
     {
-		$this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::WORKER_STARTING,
-			$callback
-		);
+		$this->events->on(QueueEventManager::WORKER_STARTING, $callback);
     }
 
     /**
@@ -114,16 +97,13 @@ class Manager implements Factory, Monitor
      */
     public function stopping(callable $callback): void
     {
-		$this->container->get(EventManagerInterface::class)->on(
-			QueueEventManager::WORKER_STOPPING,
-			$callback
-		);
+		$this->events->on(QueueEventManager::WORKER_STOPPING, $callback);
     }
 
 	protected function queueEventManager(): QueueEventManager
 	{
 		if (! $this->queueEventManager) {
-			$this->queueEventManager = $this->container->make(QueueEventManager::class);
+			$this->queueEventManager = $this->container->get(QueueEventManager::class);
 		}
 
 		return $this->queueEventManager;
@@ -134,26 +114,28 @@ class Manager implements Factory, Monitor
      */
     public function connected(UnitEnum|string|null $name = null): bool
     {
-        return isset($this->connections[Helpers::enumValue($name) ?: $this->getDefaultDriver()]);
+        $name = $name instanceof UnitEnum ? $name->name : ($name ?: $this->getDefaultDriver());
+
+        return isset($this->drivers[$name]);
     }
 
     /**
-     * Resolve a queue connection instance.
+     * Resolve a queue driver instance.
      */
-    public function connection(UnitEnum|string|null $name = null): QueueContract
+    public function driver(UnitEnum|string|null $name = null): QueueContract
     {
-        $name = Helpers::enumValue($name) ?: $this->getDefaultDriver();
+        $name = $name instanceof UnitEnum ? $name->name : ($name ?: $this->getDefaultDriver());
 
-        // If the connection has not been resolved yet we will resolve it now as all
-        // of the connections are resolved when they are actually needed so we do
-        // not make any unnecessary connection to the various queue end-points.
-        if (! isset($this->connections[$name])) {
-            $this->connections[$name] = $this->resolve($name);
+        // If the driver has not been resolved yet we will resolve it now as all
+        // of the drivers are resolved when they are actually needed so we do
+        // not make any unnecessary driver to the various queue end-points.
+        if (! isset($this->drivers[$name])) {
+            $this->drivers[$name] = $this->resolve($name);
 
-            $this->connections[$name]->setContainer($this->container);
+            $this->drivers[$name]->setContainer($this->container);
         }
 
-        return $this->connections[$name];
+        return $this->drivers[$name];
     }
 
     /**
@@ -163,15 +145,10 @@ class Manager implements Factory, Monitor
      */
     protected function resolve(string $name): Queue
     {
-        $config = $this->getConfig($name);
+        $config = $this->config->connection($name);
+        $driver = $this->config->driver($config['driver']);
 
-        if (is_null($config)) {
-            throw new InvalidArgumentException("The [{$name}] queue connection has not been configured.");
-        }
-
-        $queue = $this->getConnector($config['driver'])
-            ->connect($this->container, $config)
-            ->setConnectionName($name);
+        $queue = $driver::connect($this->container, $config)->setConnectionName($name);
 
         if (method_exists($queue, 'setConfig')) {
             $queue->setConfig($config);
@@ -181,26 +158,11 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Get the connector for a given driver.
-     *
-     * @throws InvalidArgumentException
-     */
-    protected function getConnector(string $driver): ConnectorInterface
-    {
-        if (! isset($this->connectors[$driver])) {
-            throw new InvalidArgumentException("No connector for [$driver].");
-        }
-
-        return call_user_func($this->connectors[$driver]);
-    }
-
-    /**
      * Pause a queue by its connection and name.
      */
     public function pause(string $connection, string $queue): void
     {
-		$this->container->get(Cache::class)
-			->forever("blitzphp:queue:paused:{$connection}:{$queue}", true);
+		$this->cache->forever("blitzphp-queue-paused-{$connection}-{$queue}", true);
 
 		$this->queueEventManager()->queuePaused($connection, $queue);
     }
@@ -212,8 +174,7 @@ class Manager implements Factory, Monitor
     {
 		$convertedTtl = $ttl instanceof DateTimeInterface ? $ttl->getTimestamp() : $ttl;
 
-		$this->container->get(Cache::class)
-			->set("blitzphp:queue:paused:{$connection}:{$queue}", true, $convertedTtl);
+		$this->cache->set("blitzphp-queue-paused-{$connection}-{$queue}", true, $convertedTtl);
 
 		$this->queueEventManager()->queuePaused($connection, $queue, $ttl);
     }
@@ -223,8 +184,7 @@ class Manager implements Factory, Monitor
      */
     public function resume(string $connection, string $queue): void
     {
-		$this->container->get(Cache::class)
-			->delete("blitzphp:queue:paused:{$connection}:{$queue}");
+		$this->cache->delete("blitzphp-queue-paused-{$connection}-{$queue}");
 
 		$this->queueEventManager()->queueResumed($connection, $queue);
     }
@@ -234,8 +194,7 @@ class Manager implements Factory, Monitor
      */
     public function isPaused(string $connection, string $queue): bool
     {
-        return (bool) $this->container->get(Cache::class)
-			->get("blitzphp:queue:paused:{$connection}:{$queue}", false);
+        return (bool) $this->cache->get("blitzphp-queue-paused-{$connection}-{$queue}", false);
     }
 
     /**
@@ -250,47 +209,19 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Add a queue connection resolver.
-     */
-    public function extend(string $driver, Closure $resolver): void
-    {
-        $this->addConnector($driver, $resolver);
-    }
-
-    /**
-     * Add a queue connection resolver.
-     */
-    public function addConnector(string $driver, Closure $resolver): void
-    {
-        $this->connectors[$driver] = $resolver;
-    }
-
-    /**
-     * Get the queue connection configuration.
-     */
-    protected function getConfig(string $name): ?array
-    {
-        if (! is_null($name) && $name !== 'null') {
-			return config("queue.connections.{$name}");
-        }
-
-        return ['driver' => 'null'];
-    }
-
-    /**
      * Get the name of the default queue connection.
      */
     public function getDefaultDriver(): string
     {
-		return config('queue.default');
+        return $this->config->default;
     }
-
-    /**
+	
+	/**
      * Set the name of the default queue connection.
      */
     public function setDefaultDriver(string $name): void
     {
-		config()->set('queue.default', $name);
+		$this->config->setDefaultDriver($name);
     }
 
     /**
@@ -312,12 +243,12 @@ class Manager implements Factory, Monitor
     /**
      * Set the container instance used by the manager.
      */
-    public function setContainer(ContainerInterface $container)
+    public function setContainer(ContainerInterface $container): self
     {
         $this->container = $container;
 
-        foreach ($this->connections as $connection) {
-            $connection->setContainer($container);
+        foreach ($this->drivers as $driver) {
+            $driver->setContainer($container);
         }
 
         return $this;
@@ -328,6 +259,6 @@ class Manager implements Factory, Monitor
      */
     public function __call(string $method, array $parameters = []): mixed
     {
-        return $this->connection()->$method(...$parameters);
+        return $this->driver()->$method(...$parameters);
     }
 }

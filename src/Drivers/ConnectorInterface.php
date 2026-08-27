@@ -10,5 +10,5 @@ interface ConnectorInterface
     /**
      * Establish a queue connection.
      */
-    public function connect(ContainerInterface $container, array $config): Queue;
+    public static function connect(ContainerInterface $container, array $config): Queue;
 }
