@@ -5,15 +5,18 @@ namespace BlitzPHP\Queue\Exceptions;
 use BlitzPHP\Contracts\Queue\Job;
 use RuntimeException;
 
+/**
+ * Exception levée lorsqu'un job a épuisé son nombre maximal de tentatives.
+ */
 class MaxAttemptsExceededException extends RuntimeException
 {
     /**
-     * The job instance.
+     * Instance du job concerné.
      */
     public ?Job $job = null;
 
     /**
-     * Create a new instance for the job.
+     * Crée une instance d'exception liée au job.
      */
     public static function forJob(Job $job): static
     {

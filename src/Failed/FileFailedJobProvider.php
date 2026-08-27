@@ -8,21 +8,24 @@ use Closure;
 use DateTimeInterface;
 use Throwable;
 
+/**
+ * Stocke les jobs échoués dans un fichier JSON, avec un plafond d'entrées.
+ */
 class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProviderInterface, PrunableFailedJobProvider
 {
     /**
-     * Create a new file failed job provider.
+     * Crée un fournisseur de jobs échoués sur fichier.
      *
-     * @param  string  $path The file path where the failed job file should be stored.
-     * @param  int  $limit The maximum number of failed jobs to retain.
-     * @param  Closure|null  $lockProviderResolver The lock provider resolver.
+     * @param  string  $path Chemin du fichier de stockage des jobs échoués.
+     * @param  int  $limit Nombre maximal de jobs échoués à conserver.
+     * @param  Closure|null  $lockProviderResolver Résolveur du fournisseur de verrous.
      */
     public function __construct(protected string $path, protected int $limit = 100, protected ?Closure $lockProviderResolver = null)
     {
     }
 
     /**
-     * Log a failed job into storage.
+     * Enregistre un job échoué dans le stockage.
      */
     public function log(string $connection, string $queue, string $payload, Throwable $exception): ?int
     {
@@ -50,7 +53,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Get the IDs of all of the failed jobs.
+     * Retourne les identifiants de tous les jobs échoués.
      */
     public function ids(?string $queue = null): array
     {
@@ -61,7 +64,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Get a list of all of the failed jobs.
+     * Retourne la liste de tous les jobs échoués.
      */
     public function all(): array
     {
@@ -69,7 +72,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Get a single failed job.
+     * Retourne un job échoué.
      */
     public function find(int|string $id): ?object
     {
@@ -78,7 +81,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Delete a single failed job from storage.
+     * Supprime un job échoué du stockage.
      */
     public function forget(string|int $id): bool
     {
@@ -93,7 +96,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Flush all of the failed jobs from storage.
+     * Vide le stockage des jobs échoués.
      */
     public function flush(?int $hours = null): void
     {
@@ -101,7 +104,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Prune all of the entries older than the given date.
+     * Purge les entrées antérieures à la date donnée.
      */
     public function prune(DateTimeInterface $before): int
     {
@@ -119,7 +122,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Execute the given callback while holding a lock.
+     * Exécute le callback en détenant un verrou.
      */
     protected function lock(Closure $callback): mixed
     {
@@ -135,7 +138,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Read the failed jobs file.
+     * Lit le fichier des jobs échoués.
      */
     protected function read(): array
     {
@@ -155,7 +158,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Write the given array of jobs to the failed jobs file.
+     * Écrit le tableau de jobs dans le fichier des échecs.
      */
     protected function write(array $jobs): void
     {
@@ -166,7 +169,7 @@ class FileFailedJobProvider implements CountableFailedJobProvider, FailedJobProv
     }
 
     /**
-     * Count the failed jobs.
+     * Compte les jobs échoués.
      */
     public function count(?string $connection = null, ?string $queue = null): int
     {

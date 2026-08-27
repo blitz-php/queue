@@ -11,20 +11,32 @@ use BlitzPHP\Traits\Support\InteractsWithTime;
 use BlitzPHP\Utilities\Date;
 use Throwable;
 
+/**
+ * Modèle des lignes de la table des jobs en file d'attente.
+ */
 class JobModel extends Model
 {
     use InteractsWithTime;
 
+    /**
+     * Format de stockage des dates (horodatage Unix).
+     */
     protected string $dateFormat    = 'int';
+
+    /**
+     * Désactive les callbacks du modèle pendant les opérations de file.
+     */
     protected bool $allowCallbacks = false;
 
     /**
-     * The expiration time of a job.
+     * Délai d'expiration d'un job réservé (secondes).
      */
     protected ?int $retryAfter = 60;
 
     /**
-     * @param ConnectionInterface $db
+     * @param array<string, mixed>                 $config   Configuration de la connexion `database`.
+     * @param ConnectionResolverInterface          $resolver Résolveur de connexions.
+     * @param ConnectionInterface                  $db       Connexion SQL utilisée.
      */
 	public function __construct(array $config, protected ConnectionResolverInterface $resolver, ConnectionInterface $db)
 	{
@@ -33,14 +45,14 @@ class JobModel extends Model
         $this->table      = $config['table'];
         $this->retryAfter = $config['retry_after'] ?? 60;
 
-        // Turn off the Strict Mode
+        // Désactive le mode transaction strict
         $db->transStrict(false);
         
         parent::__construct($resolver, $db);
 	}
 
     /**
-     * Get the size of the queue.
+     * Retourne le nombre total de jobs dans la file.
      */
     public function size(string $queue): int
     {
@@ -50,7 +62,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the number of pending jobs.
+     * Retourne le nombre de jobs en attente.
      */
     public function pendingSize(string $queue): int
     {
@@ -62,7 +74,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the number of delayed jobs.
+     * Retourne le nombre de jobs retardés.
      */
     public function delayedSize(string $queue): int
     {
@@ -74,7 +86,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the number of reserved jobs.
+     * Retourne le nombre de jobs réservés.
      */
     public function reservedSize(string $queue): int
     {
@@ -85,7 +97,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the pending jobs for the given queue.
+     * Retourne les jobs en attente de la file donnée.
      */
     public function pendingJobs(string $queue): array
     {
@@ -97,7 +109,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the delayed jobs for the given queue.
+     * Retourne les jobs retardés de la file donnée.
      */
     public function delayedJobs(string $queue): array
     {
@@ -109,7 +121,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the reserved jobs for the given queue.
+     * Retourne les jobs réservés de la file donnée.
      */
     public function reservedJobs(string $queue): array
     {
@@ -120,7 +132,7 @@ class JobModel extends Model
     }
 
     /**
-     * Get the creation timestamp of the oldest pending job, excluding delayed jobs.
+     * Retourne l'horodatage de création du plus ancien job en attente (hors retardés).
      */
     public function creationTimeOfOldestPendingJob(string $queue): ?int
     {
@@ -133,7 +145,7 @@ class JobModel extends Model
     }
 
     /**
-     * Push a raw payload to the database with a given delay of (n) seconds.
+     * Insère un payload brut en base avec un délai de n secondes.
      */
     public function pushToDatabase(array $data): mixed
     {
@@ -143,12 +155,12 @@ class JobModel extends Model
     }
 
     /**
-     * Get the next available job for the queue.
+     * Retourne le prochain job disponible de la file.
      */
     public function getNextAvailableJob(string $queue): ?object
     {
         return $this->builder()
-            // ->lock($this->getLockForPopping()) available only in blitz-php/database > 1.2
+            // ->lock($this->getLockForPopping()) disponible uniquement avec blitz-php/database > 1.2
             ->where('queue', $queue)
             ->where(function ($query) {
                 $this->isAvailable($query);
@@ -159,7 +171,7 @@ class JobModel extends Model
     }
 
     /**
-     * Delete a reserved job from the queue.
+     * Supprime un job réservé de la file.
      *
      * @throws Throwable
      */
@@ -174,7 +186,7 @@ class JobModel extends Model
 
     
     /**
-     * Delete all of the jobs from the queue.
+     * Supprime tous les jobs de la file.
      */
     public function clear(string $queue): bool
     {
@@ -184,7 +196,7 @@ class JobModel extends Model
     }
 
     /**
-     * Modify the query to check for available jobs.
+     * Restreint la requête aux jobs disponibles.
      */
     protected function isAvailable(BaseBuilder $query): void
     {
@@ -195,7 +207,7 @@ class JobModel extends Model
     }
 
     /**
-     * Modify the query to check for jobs that are reserved but have expired.
+     * Inclut les jobs réservés dont le verrou a expiré.
      */
     protected function isReservedButExpired(BaseBuilder $query): void
     {

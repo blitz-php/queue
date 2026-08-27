@@ -11,6 +11,9 @@ use Exception;
 use RuntimeException;
 use Throwable;
 
+/**
+ * Handler invoqué par le worker pour désérialiser et exécuter un job utilisateur.
+ */
 class CallQueuedHandler
 {
     /**
@@ -21,8 +24,8 @@ class CallQueuedHandler
     }
 
     /**
-     * Handle the queued job.
-     * C'est la méthode appelée par le worker via JobName::parse()
+     * Traite le job enfilé.
+     * Méthode invoquée par le worker via JobName::parse().
      */
     public function call(Job $job, array $data): void
     {
@@ -103,7 +106,7 @@ class CallQueuedHandler
     }
 
     /**
-     * Set the job instance of the given class if necessary.
+     * Attache l'instance de job au handler si le trait InteractsWithQueue est utilisé.
      */
     protected function setJobInstanceIfNecessary(Job $job, mixed $instance): mixed
     {

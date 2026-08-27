@@ -4,6 +4,12 @@ namespace BlitzPHP\Queue\DTO;
 use BlitzPHP\Queue\Drivers\ConnectorInterface;
 use InvalidArgumentException;
 
+/**
+ * Représentation objet de la configuration `queue.php`.
+ *
+ * Sert au gestionnaire pour résoudre la connexion par défaut, les options
+ * de chaque backend, les classes de pilotes et le stockage des échecs.
+ */
 class Config
 {
     /**
@@ -69,7 +75,13 @@ class Config
     }
 
     /**
-     * Récupère une connexion spécifique
+     * Retourne la configuration d'une connexion, ou un pilote `null` si le nom est vide.
+     *
+     * @param string|null $name Nom de la connexion (`connections.{name}`).
+     *
+     * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException Si la connexion n'est pas définie.
      */
     public function connection(?string $name): array
     {
@@ -85,7 +97,13 @@ class Config
     }
 
     /**
-     * @return class-string<ConnectorInterface::class>
+     * Retourne le nom de classe du pilote enregistré pour le nom donné.
+     *
+     * @param string $name Nom du pilote (ex. `database`).
+     *
+     * @return class-string<ConnectorInterface>
+     *
+     * @throws InvalidArgumentException Si le pilote n'est pas enregistré ou n'implémente pas le contrat.
      */
     public function driver(string $name): string 
     {
@@ -102,8 +120,10 @@ class Config
         return $driver;
     }
 
-     /**
-     * Set the name of the default queue connection.
+    /**
+     * Définit le nom de la connexion de file d'attente par défaut.
+     *
+     * Met aussi à jour la configuration runtime `queue.default`.
      */
     public function setDefaultDriver(string $name): void
     {

@@ -8,29 +8,32 @@ use DateInterval;
 use DateTimeInterface;
 use Throwable;
 
+/**
+ * Job factice utilisé pour tester les interactions avec la file (delete, fail, release).
+ */
 class FakeJob extends Job implements JobContract
 {
     /**
-     * The number of seconds the released job was delayed.
+     * Délai (secondes) avec lequel le job a été relâché.
      *
      * @var int
      */
     public $releaseDelay;
 
     /**
-     * The number of attempts made to process the job.
+     * Nombre de tentatives de traitement du job.
      */
     public int $attempts = 1;
 
     /**
-     * The exception the job failed with.
+     * Exception ayant provoqué l'échec du job.
      *
      * @var \Throwable
      */
     public $failedWith;
 
     /**
-     * Get the job identifier.
+     * Retourne l'identifiant du job.
      */
     public function getJobId(): string
     {
@@ -38,7 +41,7 @@ class FakeJob extends Job implements JobContract
     }
 
     /**
-     * Get the raw body of the job.
+     * Retourne le corps brut (JSON) du job.
      */
     public function getRawBody(): string
     {
@@ -46,7 +49,7 @@ class FakeJob extends Job implements JobContract
     }
 
     /**
-     * Release the job back into the queue after (n) seconds.
+     * Relâche le job dans la file après n secondes.
      */
     public function release(DateTimeInterface|DateInterval|int $delay = 0): void
     {
@@ -55,7 +58,7 @@ class FakeJob extends Job implements JobContract
     }
 
     /**
-     * Get the number of times the job has been attempted.
+     * Retourne le nombre de tentatives déjà effectuées.
      */
     public function attempts(): int
     {
@@ -63,7 +66,7 @@ class FakeJob extends Job implements JobContract
     }
 
     /**
-     * Delete the job from the queue.
+     * Supprime le job de la file.
      */
     public function delete(): void
     {
@@ -71,7 +74,7 @@ class FakeJob extends Job implements JobContract
     }
 
     /**
-     * Delete the job, call the "failed" method, and raise the failed job event.
+     * Supprime le job, appelle `failed()` et émet l'événement d'échec.
      */
     public function fail(?Throwable $e = null): void
     {

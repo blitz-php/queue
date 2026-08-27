@@ -11,9 +11,14 @@ use DateInterval;
 use DateTimeInterface;
 use Throwable;
 
+/**
+ * Émet les événements du cycle de vie des files, jobs et workers.
+ */
 class QueueEventManager
 {
-	// Event names for queue operations
+	/**
+     * Noms d'événements des opérations de file.
+     */
     public const JOB_POPPING                    = 'queue.job.popping';
     public const JOB_POPPED                     = 'queue.job.popped';
     public const JOB_PUSHED                     = 'queue.job.pushed';
@@ -38,12 +43,15 @@ class QueueEventManager
     public const HANDLER_CONNECTION_FAILED      = 'queue.handler.connection.failed';
     public const HANDLER_CONNECTION_ESTABLISHED = 'queue.handler.connection.established';
 
+    /**
+     * @param EventManagerInterface $events Gestionnaire d'événements de l'application.
+     */
 	public function __construct(protected EventManagerInterface $events)
 	{
 	}
 
 	/**
-     * Emit job attempted event
+     * Émet l'événement de tentative de job.
      */
     public function jobAttempted(string $connection, Job $job, ?Throwable $e = null): void
 	{
@@ -56,7 +64,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job failed event
+     * Émet l'événement d'échec de job.
      */
     public function jobFailed(string $connection, Job $job, ?Throwable $e): void
 	{
@@ -69,7 +77,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job exception-occurent event
+     * Émet l'événement d'exception survenue sur un job.
      */
     public function jobExceptionOccured(string $connection, Job $job, Throwable $e): void
 	{
@@ -82,7 +90,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job popping event
+     * Émet l'événement de prélèvement imminent d'un job.
      */
     public function jobPopping(string $connection, ?string $queue = null): void
 	{
@@ -94,7 +102,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job popped event
+     * Émet l'événement de job prélevé.
      */
     public function jobPopped(string $connection, ?Job $job = null): void
 	{
@@ -107,7 +115,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job processing event
+     * Émet l'événement de traitement en cours.
      */
     public function jobProcessing(string $connection, Job $job): void
 	{
@@ -120,7 +128,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job processed event
+     * Émet l'événement de job traité.
      */
     public function jobProcessed(string $connection, Job $job): void
 	{
@@ -133,7 +141,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job processed event
+     * Émet l'événement « job enfilé ».
      */
     public function jobQueued(string $connection, ?string $queue, string|int|null $jobId, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
 	{
@@ -146,7 +154,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job processed event
+     * Émet l'événement « job en cours d'enfilement ».
      */
     public function jobQueueing(string $connection, ?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
 	{
@@ -159,7 +167,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job released-after-exception started event
+     * Émet l'événement de relâchement après exception.
      */
     public function jobReleasedAfterException(string $connection, Job $job, int $backoff): void
 	{
@@ -172,7 +180,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit job timeout event
+     * Émet l'événement de dépassement de délai.
      */
     public function jobTimeout(string $connection, string $queue, Job $job, array $metadata = []): void
 	{
@@ -188,7 +196,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit queue cleared event
+     * Émet l'événement de file vidée.
      */
     public function queueCleared(string $connection, ?string $queue = null): void
 	{
@@ -200,7 +208,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit queue paused event
+     * Émet l'événement de file en pause.
      */
     public function queuePaused(string $connection, string $queue, DateTimeInterface|DateInterval|int|null  $ttl = null): void
 	{
@@ -213,7 +221,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit queue resumed event
+     * Émet l'événement de reprise de file.
      */
     public function queueResumed(string $connection, string $queue): void
 	{
@@ -225,7 +233,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit queue resumed event
+     * Émet l'événement de bascule (failover) vers une autre connexion.
      */
     public function queueFailedOver(string $connection, string $job, Throwable $e): void
 	{
@@ -237,7 +245,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit worker started event
+     * Émet l'événement de démarrage du worker.
      */
     public function workerStarting(string $connection, string $queue, WorkerOptions $options): void
 	{
@@ -250,7 +258,7 @@ class QueueEventManager
     }
 
     /**
-     * Emit worker stopped event
+     * Émet l'événement d'arrêt du worker.
      */
 	 public function workerStopping(string $connection, int $status, ?WorkerOptions $options = null, ?WorkerStopReason $reason = null): void
 	{
@@ -262,7 +270,7 @@ class QueueEventManager
     }
 
 	/**
-     * Emit handler connection established event
+     * Émet l'événement de connexion de pilote établie.
      */
     public function handlerConnectionEstablished(string $connection, array $config = []): void
 	{
@@ -274,7 +282,7 @@ class QueueEventManager
     }
 
     /**
-     * Emit handler connection failed event
+     * Émet l'événement d'échec de connexion de pilote.
      */
     public function handlerConnectionFailed(string $connection, Throwable $exception, array $config = []): void
 	{

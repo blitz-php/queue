@@ -4,10 +4,13 @@ namespace BlitzPHP\Queue\Exceptions;
 
 use BlitzPHP\Contracts\Queue\Job;
 
+/**
+ * Exception levée lorsqu'un job dépasse son délai d'exécution (timeout).
+ */
 class TimeoutExceededException extends MaxAttemptsExceededException
 {
     /**
-     * Create a new instance for the job.
+     * Crée une instance d'exception liée au job.
      */
     public static function forJob(Job $job): static
     {

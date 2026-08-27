@@ -4,15 +4,18 @@ namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Utilities\Date;
 
+/**
+ * Vue en lecture seule d'un job (inspection des files en attente, retardées ou réservées).
+ */
 class InspectedJob
 {
     /**
-     * Create a new inspected job instance.
+     * Crée une instance de job inspecté.
      *
-     * @param  string|null  $uuid  The unique identifier for the job.
-     * @param  string|null  $name  The display name of the job.
-     * @param  int  $attempts  The number of times the job has been attempted.
-     * @param  Date|null  $createdAt  The date and time the job was created.
+     * @param  string|null  $uuid  Identifiant unique du job.
+     * @param  string|null  $name  Nom d'affichage du job.
+     * @param  int  $attempts  Nombre de tentatives déjà effectuées.
+     * @param  Date|null  $createdAt  Date et heure de création du job.
      */
     public function __construct(
         public readonly ?string $uuid,
@@ -23,10 +26,10 @@ class InspectedJob
     }
 
     /**
-     * Create a new instance from a raw job payload.
+     * Crée une instance à partir d'un payload JSON brut.
      *
-     * @param  string  $payload  The raw JSON job payload.
-     * @param  int|null  $attempts  The number of times the job has been attempted.
+     * @param  string  $payload  Payload JSON brut du job.
+     * @param  int|null  $attempts  Nombre de tentatives déjà effectuées.
      */
     public static function fromPayload(string $payload, ?int $attempts = null): static
     {

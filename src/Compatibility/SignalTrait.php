@@ -11,51 +11,51 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
     }
 } else {
     /**
-     * Signal Trait
+     * Trait de gestion des signaux.
      *
-     * Provides PCNTL signal handling capabilities for CLI commands.
-     * Requires the PCNTL extension (Unix only).
+     * Fournit la gestion des signaux PCNTL pour les commandes CLI.
+     * Nécessite l'extension PCNTL (Unix uniquement).
      *
-     * Bundled compatibility version for BlitzPHP < 1.2
+     * Version de compatibilité fournie pour BlitzPHP < 1.2.
      */
     trait SignalTrait
     {
         /**
-         * Whether the process should continue running (false = termination requested).
+         * Indique si le processus doit continuer (false = arrêt demandé).
          */
         private bool $running = true;
 
         /**
-         * Whether signals are currently blocked.
+         * Indique si les signaux sont actuellement bloqués.
          */
         private bool $signalsBlocked = false;
 
         /**
-         * Array of registered signals.
+         * Liste des signaux enregistrés.
          *
          * @var list<int>
          */
         private array $registeredSignals = [];
 
         /**
-         * Signal-to-method mapping.
+         * Correspondance signal → méthode.
          *
          * @var array<int, string>
          */
         private array $signalMethodMap = [];
 
         /**
-         * Cached result of PCNTL extension availability.
+         * Résultat mis en cache de la disponibilité de l'extension PCNTL.
          */
         private static ?bool $isPcntlAvailable = null;
 
         /**
-         * Cached result of POSIX extension availability.
+         * Résultat mis en cache de la disponibilité de l'extension POSIX.
          */
         private static ?bool $isPosixAvailable = null;
 
         /**
-         * Check if PCNTL extension is available (cached).
+         * Indique si l'extension PCNTL est disponible (valeur mise en cache).
          */
         protected function isPcntlAvailable(): bool
         {
@@ -74,7 +74,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Check if POSIX extension is available (cached).
+         * Indique si l'extension POSIX est disponible (valeur mise en cache).
          */
         protected function isPosixAvailable(): bool
         {
@@ -86,10 +86,10 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Register signal handlers.
+         * Enregistre les gestionnaires de signaux.
          *
-         * @param list<int>          $signals   List of signals to handle
-         * @param array<int, string> $methodMap Optional signal-to-method mapping
+         * @param list<int>          $signals   Liste des signaux à traiter.
+         * @param array<int, string> $methodMap Correspondance optionnelle signal → méthode.
          */
         protected function registerSignals(
             array $signals = [],
@@ -107,7 +107,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
                 // CLI::write('POSIX extension is not available. SIGTSTP and SIGCONT signals will be disabled.', 'yellow');
                 $signals = array_diff($signals, [SIGTSTP, SIGCONT]);
 
-                // Remove from method map as well
+                // Retire aussi les associations de méthodes
                 unset($methodMap[SIGTSTP], $methodMap[SIGCONT]);
 
                 if ($signals === []) {
@@ -115,7 +115,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
                 }
             }
 
-            // Enable async signals for immediate response
+            // Active les signaux asynchrones pour une réaction immédiate
             pcntl_async_signals(true);
 
             $this->signalMethodMap = $methodMap;
@@ -131,13 +131,13 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Handle incoming signals.
+         * Traite les signaux reçus.
          */
         protected function handleSignal(int $signal): void
         {
             $this->callCustomHandler($signal);
 
-            // Apply standard Unix signal behavior for registered signals
+            // Applique le comportement Unix standard pour les signaux enregistrés
             switch ($signal) {
                 case SIGTERM:
                 case SIGINT:
@@ -147,25 +147,25 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
                     break;
 
                 case SIGTSTP:
-                    // Restore default handler and re-send signal to actually suspend
+                    // Restaure le handler par défaut et renvoie le signal pour suspendre vraiment
                     pcntl_signal(SIGTSTP, SIG_DFL);
                     posix_kill(posix_getpid(), SIGTSTP);
                     break;
 
                 case SIGCONT:
-                    // Re-register SIGTSTP handler after resume
+                    // Réenregistre le handler SIGTSTP après reprise
                     pcntl_signal(SIGTSTP, [$this, 'handleSignal']);
                     break;
             }
         }
 
         /**
-         * Call custom signal handler if one is mapped for this signal.
-         * Falls back to generic onInterruption() method if no explicit mapping exists.
+         * Appelle le gestionnaire personnalisé s'il est associé à ce signal.
+         * Se rabat sur onInterruption() si aucune association explicite n'existe.
          */
         private function callCustomHandler(int $signal): void
         {
-            // Check for explicit mapping first
+            // Association explicite en priorité
             $method = $this->signalMethodMap[$signal] ?? null;
 
             if ($method !== null && method_exists($this, $method)) {
@@ -174,14 +174,14 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
                 return;
             }
 
-            // If no explicit mapping, try generic catch-all method
+            // Si aucune association, tente la méthode générique onInterruption()
             if (method_exists($this, 'onInterruption')) { // @phpstan-ignore-line
                 $this->onInterruption($signal);
             }
         }
 
         /**
-         * Check if command should terminate.
+         * Indique si la commande doit s'arrêter.
          */
         protected function shouldTerminate(): bool
         {
@@ -189,7 +189,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Check if the process is currently running (not terminated).
+         * Indique si le processus est encore en cours d'exécution.
          */
         protected function isRunning(): bool
         {
@@ -197,7 +197,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Request immediate termination.
+         * Demande l'arrêt immédiat.
          */
         protected function requestTermination(): void
         {
@@ -205,28 +205,28 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Reset all states (for testing or restart scenarios).
+         * Réinitialise tous les états (tests ou redémarrage).
          */
         protected function resetState(): void
         {
             $this->running = true;
 
-            // Unblock signals if they were blocked
+            // Débloque les signaux s'ils l'étaient
             if ($this->signalsBlocked) {
                 $this->unblockSignals();
             }
         }
 
         /**
-         * Execute a callable with ALL signals blocked to prevent ANY interruption during critical operations.
+         * Exécute un callable en bloquant tous les signaux pour éviter toute interruption.
          *
-         * This blocks ALL interruptible signals including:
-         * - Termination signals (SIGTERM, SIGINT, etc.)
-         * - Pause/resume signals (SIGTSTP, SIGCONT)
-         * - Custom signals (SIGUSR1, SIGUSR2)
+         * Bloque tous les signaux interruptibles, notamment :
+         * - signaux de terminaison (SIGTERM, SIGINT, etc.)
+         * - pause / reprise (SIGTSTP, SIGCONT)
+         * - signaux personnalisés (SIGUSR1, SIGUSR2)
          *
-         * Only SIGKILL (unblockable) can still terminate the process.
-         * Use this for database transactions, file operations, or any critical atomic operations.
+         * Seul SIGKILL (non bloquable) peut encore terminer le processus.
+         * À utiliser pour les transactions SQL, les I/O fichiers ou toute opération atomique critique.
          *
          * @template TReturn
          *
@@ -246,42 +246,42 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Block ALL interruptible signals during critical sections.
-         * Only SIGKILL (unblockable) can terminate the process.
+         * Bloque tous les signaux interruptibles pendant une section critique.
+         * Seul SIGKILL (non bloquable) peut encore terminer le processus.
          */
         protected function blockSignals(): void
         {
             if (! $this->signalsBlocked && $this->isPcntlAvailable()) {
-                // Block ALL signals that could interrupt critical operations
+                // Bloque tous les signaux susceptibles d'interrompre une section critique
                 pcntl_sigprocmask(SIG_BLOCK, [
-                    SIGTERM, SIGINT, SIGHUP, SIGQUIT, // Termination signals
-                    SIGTSTP, SIGCONT,                 // Pause/resume signals
-                    SIGUSR1, SIGUSR2,                 // Custom signals
-                    SIGPIPE, SIGALRM,                 // Other common signals
+                    SIGTERM, SIGINT, SIGHUP, SIGQUIT, // Signaux de terminaison
+                    SIGTSTP, SIGCONT,                 // Pause / reprise
+                    SIGUSR1, SIGUSR2,                 // Signaux personnalisés
+                    SIGPIPE, SIGALRM,                 // Autres signaux courants
                 ]);
                 $this->signalsBlocked = true;
             }
         }
 
         /**
-         * Unblock previously blocked signals.
+         * Débloque les signaux précédemment bloqués.
          */
         protected function unblockSignals(): void
         {
             if ($this->signalsBlocked && $this->isPcntlAvailable()) {
-                // Unblock the same signals we blocked
+                // Débloque les mêmes signaux qu'on a bloqués
                 pcntl_sigprocmask(SIG_UNBLOCK, [
-                    SIGTERM, SIGINT, SIGHUP, SIGQUIT, // Termination signals
-                    SIGTSTP, SIGCONT,                 // Pause/resume signals
-                    SIGUSR1, SIGUSR2,                 // Custom signals
-                    SIGPIPE, SIGALRM,                 // Other common signals
+                    SIGTERM, SIGINT, SIGHUP, SIGQUIT, // Signaux de terminaison
+                    SIGTSTP, SIGCONT,                 // Pause / reprise
+                    SIGUSR1, SIGUSR2,                 // Signaux personnalisés
+                    SIGPIPE, SIGALRM,                 // Autres signaux courants
                 ]);
                 $this->signalsBlocked = false;
             }
         }
 
         /**
-         * Check if signals are currently blocked.
+         * Indique si les signaux sont actuellement bloqués.
          */
         protected function signalsBlocked(): bool
         {
@@ -289,7 +289,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Add or update signal-to-method mapping at runtime.
+         * Ajoute ou met à jour une association signal → méthode à l'exécution.
          */
         protected function mapSignal(int $signal, string $method): void
         {
@@ -297,7 +297,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Get human-readable signal name.
+         * Retourne le nom lisible du signal.
          */
         protected function getSignalName(int $signal): string
         {
@@ -317,7 +317,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Unregister all signals (cleanup).
+         * Désenregistre tous les signaux (nettoyage).
          */
         protected function unregisterSignals(): void
         {
@@ -334,7 +334,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Check if signals are registered.
+         * Indique si des signaux sont enregistrés.
          */
         protected function hasSignals(): bool
         {
@@ -342,7 +342,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Get list of registered signals.
+         * Retourne la liste des signaux enregistrés.
          *
          * @return list<int>
          */
@@ -352,7 +352,7 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         }
 
         /**
-         * Get comprehensive process state information.
+         * Retourne un état complet du processus.
          *
          * @return array{
          *      pid: int,
@@ -373,23 +373,23 @@ if (trait_exists('BlitzPHP\CLI\SignalTrait')) {
         {
             $pid   = getmypid();
             $state = [
-                // Process identification
+                // Identification du processus
                 'pid'     => $pid,
                 'running' => $this->running,
 
-                // Signal handling status
+                // État de la gestion des signaux
                 'pcntl_available'          => $this->isPcntlAvailable(),
                 'registered_signals'       => count($this->registeredSignals),
                 'registered_signals_names' => array_map([$this, 'getSignalName'], $this->registeredSignals),
                 'signals_blocked'          => $this->signalsBlocked,
                 'explicit_mappings'        => count($this->signalMethodMap),
 
-                // System resources
+                // Ressources système
                 'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
                 'memory_peak_mb'  => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
             ];
 
-            // Add terminal control info if POSIX extension is available
+            // Infos de contrôle de terminal si l'extension POSIX est disponible
             if ($this->isPosixAvailable()) {
                 $state['session_id']               = posix_getsid($pid);
                 $state['process_group']            = posix_getpgid($pid);

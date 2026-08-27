@@ -13,17 +13,20 @@ use PHPUnit\Framework\Assert as PHPUnit;
 use RuntimeException;
 use Throwable;
 
+/**
+ * Interactions d'un job métier avec la file (delete, fail, release) et assertions de test.
+ */
 trait InteractsWithQueue
 {
     use InteractsWithTime;
 
     /**
-     * The underlying queue job instance.
+     * Instance de job de file sous-jacente.
      */
     public ?JobContract $job = null;
 
     /**
-     * Get the number of times the job has been attempted.
+     * Retourne le nombre de tentatives déjà effectuées.
      */
     public function attempts(): int
     {
@@ -31,7 +34,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Delete the job from the queue.
+     * Supprime le job de la file.
      */
     public function delete(): void
     {
@@ -41,7 +44,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Fail the job from the queue.
+     * Marque le job en échec depuis la file.
      *
      * @throws InvalidArgumentException
      */
@@ -61,7 +64,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Release the job back into the queue after (n) seconds.
+     * Relâche le job dans la file après n secondes.
      */
     public function release(DateTimeInterface|DateInterval|int $delay = 0): void
     {
@@ -75,7 +78,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Indicate that queue interactions like fail, delete, and release should be faked.
+     * Active le mode simulé pour fail, delete et release.
      */
     public function withFakeQueueInteractions(): self
     {
@@ -85,7 +88,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was deleted from the queue.
+     * Vérifie que le job a été supprimé de la file.
      */
     public function assertDeleted(): self
     {
@@ -100,7 +103,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was not deleted from the queue.
+     * Vérifie que le job n'a pas été supprimé de la file.
      */
     public function assertNotDeleted(): self
     {
@@ -115,7 +118,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was manually failed.
+     * Vérifie que le job a été marqué en échec manuellement.
      */
     public function assertFailed(): self
     {
@@ -130,7 +133,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was manually failed with a specific exception.
+     * Vérifie que le job a échoué manuellement avec une exception donnée.
      */
     public function assertFailedWith(Throwable|string  $exception): self
     {
@@ -174,7 +177,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was not manually failed.
+     * Vérifie que le job n'a pas été marqué en échec manuellement.
      */
     public function assertNotFailed(): self
     {
@@ -189,7 +192,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was released back onto the queue.
+     * Vérifie que le job a été relâché dans la file.
      */
     public function assertReleased(DateTimeInterface|DateInterval|int|null $delay = null): self
     {
@@ -216,7 +219,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Assert that the job was not released back onto the queue.
+     * Vérifie que le job n'a pas été relâché dans la file.
      */
     public function assertNotReleased(): self
     {
@@ -231,7 +234,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Ensure that queue interactions have been faked.
+     * S'assure que les interactions de file ont été simulées.
      *
      * @throws RuntimeException
      */
@@ -243,7 +246,7 @@ trait InteractsWithQueue
     }
 
     /**
-     * Set the base queue job instance.
+     * Définit l'instance de job de file sous-jacente.
      */
     public function setJob(JobContract $job): self
     {

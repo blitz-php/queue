@@ -14,10 +14,13 @@ use BlitzPHP\Queue\Failed\NullFailedJobProvider;
 use BlitzPHP\Queue\Manager;
 use BlitzPHP\Queue\Worker;
 
+/**
+ * Fabrique des services liés à la file d'attente (gestionnaire, worker, jobs échoués).
+ */
 class Services extends BaseServices
 {
     /**
-     * Queue Manager 
+     * Gestionnaire de files d'attente.
      */
     public static function queue(array $config = [], bool $shared = true): Manager
     {
@@ -34,7 +37,7 @@ class Services extends BaseServices
     }
 
     /**
-     * Queue Worker 
+     * Worker de file d'attente.
      */
     public static function worker(bool $shared = true): Worker
     {
@@ -77,6 +80,9 @@ class Services extends BaseServices
         );
     }
 
+    /**
+     * Fournisseur de jobs échoués selon `queue.failed.driver`.
+     */
     public static function queueFailer(array $config = [], bool $shared = true): FailedJobProviderInterface
     {
         if (true === $shared && isset(static::$instances[FailedJobProviderInterface::class])) {

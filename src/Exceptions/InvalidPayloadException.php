@@ -4,15 +4,18 @@ namespace BlitzPHP\Queue\Exceptions;
 
 use InvalidArgumentException;
 
+/**
+ * Exception levée lorsque le payload d'un job ne peut pas être encodé en JSON.
+ */
 class InvalidPayloadException extends InvalidArgumentException
 {
     /**
-     * The value that failed to decode.
+     * Valeur dont le décodage / l'encodage a échoué.
      */
     public mixed $value;
 
     /**
-     * Create a new exception instance.
+     * Crée une nouvelle instance d'exception.
      */
     public function __construct(?string $message = null, mixed $value = null)
     {

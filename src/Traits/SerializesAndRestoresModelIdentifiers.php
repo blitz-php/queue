@@ -10,10 +10,13 @@ use BlitzPHP\Wolke\Relations\Concerns\AsPivot;
 use BlitzPHP\Wolke\Relations\Pivot;
 use Illuminate\Contracts\Database\ModelIdentifier;
 
+/**
+ * Remplace les entités / collections Wolke par des identifiants lors de la sérialisation, puis les recharge.
+ */
 trait SerializesAndRestoresModelIdentifiers
 {
     /**
-     * Get the property value prepared for serialization.
+     * Prépare la valeur de propriété pour la sérialisation.
      */
     protected function getSerializedPropertyValue(mixed $value, bool $withRelations = true): mixed
     {
@@ -43,7 +46,7 @@ trait SerializesAndRestoresModelIdentifiers
     }
 
     /**
-     * Get the restored property value after deserialization.
+     * Restaure la valeur de propriété après désérialisation.
      */
     protected function getRestoredPropertyValue(mixed $value): mixed
     {
@@ -57,7 +60,7 @@ trait SerializesAndRestoresModelIdentifiers
     }
 
     /**
-     * Restore a queueable collection instance.
+     * Restaure une collection enfilable.
      *
      * @param  \Illuminate\Contracts\Database\ModelIdentifier  $value
      * @return WolkeCollection
@@ -92,7 +95,7 @@ trait SerializesAndRestoresModelIdentifiers
     }
 
     /**
-     * Restore the model from the model identifier instance.
+     * Restaure le modèle à partir de son identifiant.
      *
      * @param  \Illuminate\Contracts\Database\ModelIdentifier  $value
      * @return \BlitzPHP\Wolke\Model
@@ -105,7 +108,7 @@ trait SerializesAndRestoresModelIdentifiers
     }
 
     /**
-     * Get the query for model restoration.
+     * Retourne la requête de restauration du modèle.
      *
      * @template TModel of \BlitzPHP\Wolke\Model
      *

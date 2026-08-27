@@ -5,19 +5,22 @@ namespace BlitzPHP\Queue\Jobs;
 use BlitzPHP\Contracts\Container\ContainerInterface;
 use BlitzPHP\Contracts\Queue\Job as JobContract;
 
+/**
+ * Job exécuté immédiatement par le pilote synchrone (sans persistance).
+ */
 class SyncJob extends Job implements JobContract
 {
     /**
-     * The class name of the job.
+     * Nom de classe du job.
      *
      * @var string
      */
     protected $job;
 
     /**
-     * Create a new job instance.
+     * Crée une nouvelle instance de job.
      *
-     * @param  string  $payload The queue message data.
+     * @param  string  $payload Données du message de file.
      */
     public function __construct(ContainerInterface $container, protected string $payload, string $connectionName, string $queue)
     {
@@ -27,7 +30,7 @@ class SyncJob extends Job implements JobContract
     }
 
     /**
-     * Release the job back into the queue after (n) seconds.
+     * Relâche le job dans la file après n secondes.
      */
     public function release(int $delay = 0): void
     {
@@ -35,7 +38,7 @@ class SyncJob extends Job implements JobContract
     }
 
     /**
-     * Get the number of times the job has been attempted.
+     * Retourne le nombre de tentatives déjà effectuées.
      */
     public function attempts(): int
     {
@@ -43,7 +46,7 @@ class SyncJob extends Job implements JobContract
     }
 
     /**
-     * Get the job identifier.
+     * Retourne l'identifiant du job.
      */
     public function getJobId(): string
     {
@@ -51,7 +54,7 @@ class SyncJob extends Job implements JobContract
     }
 
     /**
-     * Get the raw body string for the job.
+     * Retourne le corps brut du job sous forme de chaîne.
      */
     public function getRawBody(): string
     {
@@ -59,7 +62,7 @@ class SyncJob extends Job implements JobContract
     }
 
     /**
-     * Get the name of the queue the job belongs to.
+     * Retourne le nom de la file du job.
      */
     public function getQueue(): string
     {

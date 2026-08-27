@@ -10,59 +10,65 @@ use BlitzPHP\Queue\Exceptions\TimeoutExceededException;
 use BlitzPHP\Traits\Support\InteractsWithTime;
 use Throwable;
 
+/**
+ * Représentation d'un job prélevé d'une file d'attente.
+ *
+ * Encapsule le payload, le cycle de vie (exécution, suppression, relâchement,
+ * échec) et les métadonnées (tentatives, timeout, backoff).
+ */
 abstract class Job
 {
     use InteractsWithTime;
 
     /**
-     * The job handler instance.
+     * Instance du handler de job résolu.
      *
      * @var mixed
      */
     protected $instance;
 
     /**
-     * The IoC container instance.
+     * Conteneur d'injection de dépendances.
      */
     protected ContainerInterface $container;
 
     /**
-     * Indicates if the job has been deleted.
+     * Indique si le job a été supprimé de la file.
      */
     protected bool $deleted = false;
 
     /**
-     * Indicates if the job has been released.
+     * Indique si le job a été relâché dans la file.
      */
     protected bool $released = false;
 
     /**
-     * Indicates if the job has failed.
+     * Indique si le job a été marqué en échec.
      */
     protected bool $failed = false;
 
     /**
-     * The name of the connection the job belongs to.
+     * Nom de la connexion à laquelle appartient le job.
      */
     protected string $connectionName;
 
     /**
-     * The name of the queue the job belongs to.
+     * Nom de la file à laquelle appartient le job.
      */
     protected string $queue;
 
     /**
-     * Get the job identifier.
+     * Retourne l'identifiant du job.
      */
     abstract public function getJobId() : string|int|null;
 
     /**
-     * Get the raw body of the job.
+     * Retourne le corps brut (JSON) du job.
      */
     abstract public function getRawBody(): string;
 
     /**
-     * Get the UUID of the job.
+     * Retourne l'UUID du job.
      */
     public function uuid(): ?string
     {
@@ -70,7 +76,7 @@ abstract class Job
     }
 
     /**
-     * Fire the job.
+     * Déclenche l'exécution du job.
      */
     public function fire(): void
     {
@@ -83,7 +89,7 @@ abstract class Job
     }
 
     /**
-     * Delete the job from the queue.
+     * Supprime le job de la file.
      */
     public function delete(): void
     {
@@ -91,7 +97,7 @@ abstract class Job
     }
 
     /**
-     * Determine if the job has been deleted.
+     * Indique si le job a été supprimé.
      */
     public function isDeleted(): bool
     {
@@ -99,7 +105,7 @@ abstract class Job
     }
 
     /**
-     * Release the job back into the queue after (n) seconds.
+     * Relâche le job dans la file après n secondes.
      */
     public function release(int $delay = 0): void
     {
@@ -107,7 +113,7 @@ abstract class Job
     }
 
     /**
-     * Determine if the job was released back into the queue.
+     * Indique si le job a été relâché dans la file.
      */
     public function isReleased(): bool
     {
@@ -115,7 +121,7 @@ abstract class Job
     }
 
     /**
-     * Determine if the job has been deleted or released.
+     * Indique si le job a été supprimé ou relâché.
      */
     public function isDeletedOrReleased(): bool
     {
@@ -123,7 +129,7 @@ abstract class Job
     }
 
     /**
-     * Determine if the job has been marked as a failure.
+     * Indique si le job a été marqué en échec.
      */
     public function hasFailed(): bool
     {
@@ -131,7 +137,7 @@ abstract class Job
     }
 
     /**
-     * Mark the job as "failed"
+     * Marque le job comme échoué.
      */
     public function markAsFailed(): void
     {
@@ -139,7 +145,7 @@ abstract class Job
     }
 
     /**
-     * Delete the job, call the "failed" method, and raise the failed job event.
+     * Supprime le job, appelle `failed()` et émet l'événement d'échec.
      */
     public function fail(?Throwable $e = null): void
     {
@@ -156,9 +162,8 @@ abstract class Job
         }
 
         try {
-            // If the job has failed, we will delete it, call the "failed" method and then call
-            // an event indicating the job has failed so it can be logged if needed. This is
-            // to allow every developer to better keep monitor of their failed queue jobs.
+            // En cas d'échec : suppression, appel de failed(), puis événement
+            // pour permettre le suivi et la journalisation des jobs échoués.
             $this->delete();
 
             $this->failed($e);
@@ -168,7 +173,7 @@ abstract class Job
     }
 
     /**
-     * Determine if the current database transaction should be rolled back to level zero.
+     * Indique si la transaction SQL courante doit être annulée jusqu'au niveau zéro.
      */
     protected function shouldRollBackDatabaseTransaction(Throwable $e): bool
     {
@@ -181,7 +186,7 @@ abstract class Job
     }
 
     /**
-     * Process an exception that caused the job to fail.
+     * Traite l'exception à l'origine de l'échec du job.
      */
     protected function failed(?Throwable $e): void
     {
@@ -195,7 +200,7 @@ abstract class Job
     }
 
     /**
-     * Resolve the given class.
+     * Résout la classe donnée via le conteneur.
      */
     protected function resolve(string $class): mixed
     {
@@ -203,7 +208,7 @@ abstract class Job
     }
 
     /**
-     * Get the resolved job handler instance.
+     * Retourne l'instance du handler déjà résolue.
      */
     public function getResolvedJob(): mixed
     {
@@ -211,7 +216,7 @@ abstract class Job
     }
 
     /**
-     * Get the decoded body of the job.
+     * Retourne le corps du job décodé (tableau).
      */
     public function payload(): array
     {
@@ -219,7 +224,7 @@ abstract class Job
     }
 
     /**
-     * Get the number of times to attempt a job.
+     * Retourne le nombre maximal de tentatives du job.
      */
     public function maxTries(): ?int
     {
@@ -227,7 +232,7 @@ abstract class Job
     }
 
     /**
-     * Get the number of times to attempt a job after an exception.
+     * Retourne le nombre maximal d'exceptions avant échec définitif.
      */
     public function maxExceptions(): ?int
     {
@@ -235,7 +240,7 @@ abstract class Job
     }
 
     /**
-     * Determine if the job should fail when it timeouts.
+     * Indique si le job doit échouer en cas de dépassement de délai.
      */
     public function shouldFailOnTimeout(): bool
     {
@@ -243,7 +248,7 @@ abstract class Job
     }
 
     /**
-     * The number of seconds to wait before retrying a job that encountered an uncaught exception.
+     * Secondes d'attente avant de relancer un job ayant levé une exception non gérée.
      *
      * @return int|int[]|null
      */
@@ -253,7 +258,7 @@ abstract class Job
     }
 
     /**
-     * Get the number of seconds the job can run.
+     * Retourne la durée maximale d'exécution du job (secondes).
      */
     public function timeout(): ?int
     {
@@ -261,7 +266,7 @@ abstract class Job
     }
 
     /**
-     * Get the timestamp indicating when the job should timeout.
+     * Retourne l'horodatage limite au-delà duquel le job ne doit plus être retenté.
      */
     public function retryUntil(): ?int
     {
@@ -269,7 +274,7 @@ abstract class Job
     }
 
     /**
-     * Get the name of the queued job class.
+     * Retourne le nom du handler de job enfilé.
      */
     public function getName(): string
     {
@@ -277,9 +282,9 @@ abstract class Job
     }
 
     /**
-     * Get the resolved display name of the queued job class.
+     * Retourne le nom d'affichage résolu du job.
      *
-     * Resolves the name of "wrapped" jobs such as class-based handlers.
+     * Résout le nom des jobs « enveloppés » (handlers de classe).
      */
     public function resolveName(): string
     {
@@ -287,9 +292,9 @@ abstract class Job
     }
 
     /**
-     * Get the class of the queued job.
+     * Retourne la classe du job enfilé.
      *
-     * Resolves the class of "wrapped" jobs such as class-based handlers.
+     * Résout la classe des jobs « enveloppés » (handlers de classe).
      */
     public function resolveQueuedJobClass(): string
     {
@@ -297,7 +302,7 @@ abstract class Job
     }
 
     /**
-     * Get the name of the connection the job belongs to.
+     * Retourne le nom de la connexion du job.
      */
     public function getConnectionName(): string
     {
@@ -305,7 +310,7 @@ abstract class Job
     }
 
     /**
-     * Get the name of the queue the job belongs to.
+     * Retourne le nom de la file du job.
      */
     public function getQueue(): string
     {
@@ -313,7 +318,7 @@ abstract class Job
     }
 
     /**
-     * Get the service container instance.
+     * Retourne le conteneur de services.
      */
     public function getContainer(): ContainerInterface
     {

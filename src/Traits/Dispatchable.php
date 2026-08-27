@@ -5,6 +5,9 @@ use BlitzPHP\Queue\Config\Services;
 use DateTimeInterface;
 use DateInterval;
 
+/**
+ * Permet de dispatcher un job via des méthodes statiques (`dispatch`, `dispatchLater`, etc.).
+ */
 trait Dispatchable
 {
     /**

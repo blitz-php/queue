@@ -18,25 +18,39 @@ use InvalidArgumentException;
 use UnitEnum;
 
 /**
+ * Gestionnaire des files d'attente.
+ *
+ * Résout les pilotes, expose les connexions et permet d'écouter le cycle de vie
+ * des jobs et des workers. Les appels magiques sont délégués à la connexion par défaut.
+ *
  * @mixin QueueContract
  */
 class Manager implements Factory, Monitor
 {
     /**
-     * The array of resolved queue drivers.
-	 *
-	 * @var array<string, Queue>
+     * Instances de pilotes déjà résolues, indexées par nom de connexion.
+     *
+     * @var array<string, Queue>
      */
     protected array $drivers = [];
 
+    /**
+     * Gestionnaire d'événements de la file.
+     */
 	protected QueueEventManager $queueEventManager;
 
+    /**
+     * Cache applicatif (pause / redémarrage des workers).
+     */
     protected Cache $cache;
 
+    /**
+     * Gestionnaire d'événements de l'application.
+     */
     protected EventManagerInterface $events;
 
     /**
-     * Create a new queue manager instance.
+     * Crée une instance du gestionnaire de files.
      */
     public function __construct(protected ContainerInterface $container, protected Config $config)
     {
@@ -45,7 +59,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the before job event.
+     * Enregistre un écouteur exécuté avant le traitement d'un job.
      */
     public function before(callable $callback): void
     {
@@ -53,7 +67,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the after job event.
+     * Enregistre un écouteur exécuté après le traitement réussi d'un job.
      */
     public function after(callable $callback): void
     {
@@ -61,7 +75,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the exception occurred job event.
+     * Enregistre un écouteur lorsqu'une exception survient pendant un job.
      */
     public function exceptionOccurred(callable $callback): void
     {
@@ -69,7 +83,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the daemon queue loop.
+     * Enregistre un écouteur à chaque itération de la boucle du daemon.
      */
     public function looping(callable $callback): void
     {
@@ -77,7 +91,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the failed job event.
+     * Enregistre un écouteur lorsqu'un job échoue définitivement.
      */
     public function failing(callable $callback): void
     {
@@ -85,7 +99,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the daemon queue starting.
+     * Enregistre un écouteur au démarrage du worker daemon.
      */
     public function starting(callable $callback): void
     {
@@ -93,13 +107,16 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Register an event listener for the daemon queue stopping.
+     * Enregistre un écouteur à l'arrêt du worker daemon.
      */
     public function stopping(callable $callback): void
     {
 		$this->events->on(QueueEventManager::WORKER_STOPPING, $callback);
     }
 
+    /**
+     * Retourne (et instancie si besoin) le gestionnaire d'événements de file.
+     */
 	protected function queueEventManager(): QueueEventManager
 	{
 		if (! $this->queueEventManager) {
@@ -110,7 +127,7 @@ class Manager implements Factory, Monitor
 	}
 
     /**
-     * Determine if the driver is connected.
+     * Indique si le pilote (connexion) donné est déjà résolu.
      */
     public function connected(UnitEnum|string|null $name = null): bool
     {
@@ -120,15 +137,16 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Resolve a queue driver instance.
+     * Résout une instance de connexion de file d'attente.
+     *
+     * Les pilotes sont instanciés à la demande pour éviter les connexions inutiles.
      */
     public function driver(UnitEnum|string|null $name = null): QueueContract
     {
         $name = $name instanceof UnitEnum ? $name->name : ($name ?: $this->getDefaultDriver());
 
-        // If the driver has not been resolved yet we will resolve it now as all
-        // of the drivers are resolved when they are actually needed so we do
-        // not make any unnecessary driver to the various queue end-points.
+        // Si le pilote n'a pas encore été résolu, on l'instancie maintenant :
+        // les connexions ne sont ouvertes que lorsqu'elles sont réellement utilisées.
         if (! isset($this->drivers[$name])) {
             $this->drivers[$name] = $this->resolve($name);
 
@@ -139,7 +157,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Resolve a queue connection.
+     * Instancie une connexion à partir de sa configuration.
      *
      * @throws InvalidArgumentException
      */
@@ -158,7 +176,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Pause a queue by its connection and name.
+     * Met une file en pause (les workers cessent d'y prélever des jobs).
      */
     public function pause(string $connection, string $queue): void
     {
@@ -168,7 +186,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Pause a queue by its connection and name for a given amount of time.
+     * Met une file en pause pendant une durée donnée.
      */
     public function pauseFor(string $connection, string $queue, DateTimeInterface|DateInterval|int $ttl): void
     {
@@ -180,7 +198,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Resume a paused queue by its connection and name.
+     * Reprend une file précédemment mise en pause.
      */
     public function resume(string $connection, string $queue): void
     {
@@ -190,7 +208,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Determine if a queue is paused.
+     * Indique si une file est actuellement en pause.
      */
     public function isPaused(string $connection, string $queue): bool
     {
@@ -198,9 +216,10 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Indicate that queue workers should not poll for restart or pause signals.
+     * Désactive le sondage cache des signaux de pause et de redémarrage.
      *
-     * This prevents the workers from hitting the application cache to determine if they need to pause or restart.
+     * Évite que les workers interrogent le cache applicatif pour savoir s'ils
+     * doivent se mettre en pause ou redémarrer.
      */
     public function withoutInterruptionPolling(): void
     {
@@ -209,7 +228,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Get the name of the default queue connection.
+     * Retourne le nom de la connexion par défaut.
      */
     public function getDefaultDriver(): string
     {
@@ -217,7 +236,7 @@ class Manager implements Factory, Monitor
     }
 	
 	/**
-     * Set the name of the default queue connection.
+     * Définit le nom de la connexion par défaut.
      */
     public function setDefaultDriver(string $name): void
     {
@@ -225,7 +244,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Get the full name for the given connection.
+     * Retourne le nom effectif d'une connexion (ou la connexion par défaut).
      */
     public function getName(?string $connection = null): string
     {
@@ -233,7 +252,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Get the container instance used by the manager.
+     * Retourne le conteneur utilisé par le gestionnaire.
      */
     public function getContainer(): ContainerInterface
     {
@@ -241,7 +260,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Set the container instance used by the manager.
+     * Définit le conteneur et le propage aux pilotes déjà résolus.
      */
     public function setContainer(ContainerInterface $container): self
     {
@@ -255,7 +274,7 @@ class Manager implements Factory, Monitor
     }
 
     /**
-     * Dynamically pass calls to the default connection.
+     * Délègue dynamiquement les appels à la connexion par défaut.
      */
     public function __call(string $method, array $parameters = []): mixed
     {

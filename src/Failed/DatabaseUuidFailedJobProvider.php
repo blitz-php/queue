@@ -8,21 +8,24 @@ use BlitzPHP\Utilities\Date;
 use DateTimeInterface;
 use Throwable;
 
+/**
+ * Stocke les jobs échoués en base, identifiés par l'UUID du payload.
+ */
 class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, FailedJobProviderInterface, PrunableFailedJobProvider
 {
     /**
-     * Create a new database failed job provider.
+     * Crée un fournisseur de jobs échoués en base de données.
      *
-     * @param  ConnectionResolverInterface  $resolver The connection resolver implementation.
-     * @param  string  $database The database connection name.
-     * @param  string  $table The database table.
+     * @param  ConnectionResolverInterface  $resolver Résolveur de connexions base de données.
+     * @param  string  $database Nom de la connexion base de données.
+     * @param  string  $table Nom de la table.
      */
     public function __construct(protected ConnectionResolverInterface $resolver, protected string $database, protected string $table)
     {
     }
 
     /**
-     * Log a failed job into storage.
+     * Enregistre un job échoué dans le stockage.
      */
     public function log(string $connection, string $queue, string $payload, Throwable $exception): ?string
     {
@@ -39,7 +42,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Get the IDs of all of the failed jobs.
+     * Retourne les identifiants de tous les jobs échoués.
      */
     public function ids(?string $queue = null): array
     {
@@ -50,7 +53,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Get a list of all of the failed jobs.
+     * Retourne la liste de tous les jobs échoués.
      */
     public function all(): array
     {
@@ -65,7 +68,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Get a single failed job.
+     * Retourne un job échoué.
      */
     public function find(string|int $id): ?object
     {
@@ -78,7 +81,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Delete a single failed job from storage.
+     * Supprime un job échoué du stockage.
      */
     public function forget(string|int $id): bool
     {
@@ -86,7 +89,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Flush all of the failed jobs from storage.
+     * Vide le stockage des jobs échoués.
      */
     public function flush(?int $hours = null): void
     {
@@ -96,7 +99,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Prune all of the entries older than the given date.
+     * Purge les entrées antérieures à la date donnée.
      */
     public function prune(DateTimeInterface $before): int
     {
@@ -114,7 +117,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Count the failed jobs.
+     * Compte les jobs échoués.
      */
     public function count(?string $connection = null, ?string $queue = null): int
     {
@@ -125,7 +128,7 @@ class DatabaseUuidFailedJobProvider implements CountableFailedJobProvider, Faile
     }
 
     /**
-     * Get a new query builder instance for the table.
+     * Retourne un constructeur de requêtes pour la table.
      *
      * @return BaseBuilder
      */

@@ -1,12 +1,11 @@
 <?php
 
-namespace BlitzPHP\Queue\DTO;
+namespace BlitzPHP\Queue;
 
 /**
  * Options d'exécution d'un worker de file d'attente.
  *
- * Ces valeurs sont généralement renseignées par la commande `queue:work`
- * et contrôlent la durée de vie, les limites et le comportement du processus.
+ * Conservé pour compatibilité ; préférez {@see \BlitzPHP\Queue\DTO\WorkerOptions}.
  */
 class WorkerOptions
 {

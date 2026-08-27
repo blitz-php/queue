@@ -11,34 +11,37 @@ use Laravel\SerializableClosure\SerializableClosure;
 use ReflectionFunction;
 use Throwable;
 
+/**
+ * Job enveloppe d'une Closure sérialisable, exécutable par le worker.
+ */
 class CallQueuedClosure
 {
     use Dispatchable, InteractsWithQueue, SerializesModels;
 
     /**
-     * The serializable Closure instance.
+     * Instance de Closure sérialisable.
      *
      * @var \Laravel\SerializableClosure\SerializableClosure
      */
     public $closure;
 
     /**
-     * The name assigned to the job.
+     * Nom assigné au job.
      */
     public ?string $name = null;
 
     /**
-     * The callbacks that should be executed on failure.
+     * Callbacks à exécuter en cas d'échec.
      */
     public array $failureCallbacks = [];
 
     /**
-     * Indicate if the job should be deleted when models are missing.
+     * Indique si le job doit être supprimé lorsque des modèles sont introuvables.
      */
     public bool $deleteWhenMissingModels = true;
 
     /**
-     * Create a new job instance.
+     * Crée une nouvelle instance de job.
      */
     public function __construct(SerializableClosure $closure)
     {
@@ -46,7 +49,7 @@ class CallQueuedClosure
     }
 
     /**
-     * Create a new job instance.
+     * Crée une nouvelle instance de job.
      */
     public static function create(Closure $job): self
     {
@@ -54,7 +57,7 @@ class CallQueuedClosure
     }
 
     /**
-     * Execute the job.
+     * Exécute le job.
      */
     public function handle(ContainerInterface $container): void
     {
@@ -62,7 +65,7 @@ class CallQueuedClosure
     }
 
     /**
-     * Add a callback to be executed if the job fails.
+     * Ajoute un callback exécuté si le job échoue.
      */
     public function onFailure(callable $callback): self
     {
@@ -74,7 +77,7 @@ class CallQueuedClosure
     }
 
     /**
-     * Handle a job failure.
+     * Traite l'échec du job.
      */
     public function failed(Throwable $e):void
     {
@@ -84,7 +87,7 @@ class CallQueuedClosure
     }
 
     /**
-     * Get the display name for the queued job.
+     * Retourne le nom d'affichage du job enfilé.
      */
     public function displayName(): string
     {
@@ -100,7 +103,7 @@ class CallQueuedClosure
     }
 
     /**
-     * Assign a name to the job.
+     * Assigne un nom au job.
      */
     public function name(string $name): self
     {

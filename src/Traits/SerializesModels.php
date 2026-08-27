@@ -5,12 +5,15 @@ namespace BlitzPHP\Queue\Traits;
 use ReflectionClass;
 use ReflectionProperty;
 
+/**
+ * Sérialise et restaure les propriétés d'un job, y compris les modèles liés.
+ */
 trait SerializesModels
 {
     use SerializesAndRestoresModelIdentifiers;
 
     /**
-     * Prepare the instance values for serialization.
+     * Prépare les valeurs de l'instance pour la sérialisation.
      */
     public function __serialize(): array
     {
@@ -60,7 +63,7 @@ trait SerializesModels
     }
 
     /**
-     * Restore the model after serialization.
+     * Restaure le modèle après désérialisation.
      */
     public function __unserialize(array $values): void
     {
@@ -92,7 +95,7 @@ trait SerializesModels
     }
 
     /**
-     * Get the property value for the given property.
+     * Retourne la valeur de la propriété donnée.
      */
     protected function getPropertyValue(ReflectionProperty $property): mixed
     {

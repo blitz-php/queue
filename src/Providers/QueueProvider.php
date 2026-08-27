@@ -8,6 +8,9 @@ use BlitzPHP\Contracts\Queue\Monitor;
 use BlitzPHP\Queue\Manager;
 use BlitzPHP\Queue\Worker;
 
+/**
+ * Fournisseur de services : lie Factory, Monitor, Manager et Worker au conteneur.
+ */
 class QueueProvider extends AbstractProvider
 {
     /**

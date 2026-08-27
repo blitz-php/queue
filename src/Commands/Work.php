@@ -19,6 +19,9 @@ use BlitzPHP\Utilities\String\Stringable;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
+/**
+ * Commande console `queue:work` : traite les jobs en daemon ou un par un.
+ */
 class Work extends Command
 {
     use InteractsWithTime;
@@ -30,60 +33,66 @@ class Work extends Command
     protected $name = 'queue:work';
 
     /** @var string Description de la commande */
-    protected $description = 'Start processing jobs on the queue as a daemon';
+    protected $description = 'Traite les jobs de la file d\'attente en mode daemon';
 
     /** @var array Arguments de la commande */
     protected $arguments = [
-        'connection' => 'The name of the queue connection to work',
+        'connection' => 'Nom de la connexion de file à traiter',
     ];
 
     /** @var array Options de la commande */
     protected $options = [
-        '--name'            => ['The name of the worker', 'default'],
-        '--queue'           => ['The names of the queues to work'],
-        '--daemon'          => ['Run the worker in daemon mode (Deprecated)'],
-        '--once'            => ['Only process the next job on the queue'],
-        '--stop-when-empty' => ['Stop when the queue is empty'],
-        '--delay'           => ['The number of seconds to delay failed jobs (Deprecated)', 0],
-        '--backoff'         => ['The number of seconds to wait before retrying a job that encountered an uncaught exception', 0],
-        '--max-jobs'        => ['The number of jobs to process before stopping', 0],
-        '--max-time'        => ['The maximum number of seconds the worker should run', 0],
-        '--force'           => ['Force the worker to run even in maintenance mode'],
-        '--memory'          => ['The memory limit in megabytes', 128],
-        '--sleep'           => ['The number of seconds to sleep when no job is available', 3],
-        '--rest'            => ['The number of seconds to rest between jobs', 0],
-        '--timeout'         => ['The number of seconds a child process can run', 60],
-        '--tries'           => ['The number of times to attempt a job before logging it failed', 1],
-        '--json'            => ['Output the queue worker information as JSON'],
+        '--name'            => ['Nom du worker', 'default'],
+        '--queue'           => ['Noms des files à traiter (séparés par des virgules)'],
+        '--daemon'          => ['Exécute le worker en mode daemon (obsolète)'],
+        '--once'            => ['Ne traite que le prochain job de la file'],
+        '--stop-when-empty' => ['S\'arrête lorsque la file est vide'],
+        '--delay'           => ['Secondes de délai avant retry d\'un job échoué (obsolète)', 0],
+        '--backoff'         => ['Secondes d\'attente avant de relancer un job ayant levé une exception', 0],
+        '--max-jobs'        => ['Nombre de jobs à traiter avant arrêt', 0],
+        '--max-time'        => ['Durée maximale d\'exécution du worker (secondes)', 0],
+        '--force'           => ['Force l\'exécution même en mode maintenance'],
+        '--memory'          => ['Limite mémoire en mégaoctets', 128],
+        '--sleep'           => ['Secondes d\'attente lorsqu\'aucun job n\'est disponible', 3],
+        '--rest'            => ['Secondes de pause entre deux jobs', 0],
+        '--timeout'         => ['Durée maximale d\'un processus enfant (secondes)', 60],
+        '--tries'           => ['Nombre de tentatives avant d\'enregistrer l\'échec', 1],
+        '--json'            => ['Affiche les informations du worker au format JSON'],
     ];
 
     /**
-     * The queue worker instance.
+     * Instance du worker de file.
      */
     protected Worker $worker;
 
     /**
-     * The cache store implementation.
+     * Implémentation du cache.
      */
     protected CacheInterface $cache;
 
+    /**
+     * Gestionnaire d'événements de l'application.
+     */
     protected EventManagerInterface $events;
 
 
     /**
-     * Holds the start time of the last processed job, if any.
+     * Horodatage de début du dernier job traité, s'il y en a un.
      */
     protected ?float $latestStartedAt = null;
 
     /**
-     * Indicates if the worker's event listeners have been registered.
+     * Indique si les écouteurs d'événements du worker ont été enregistrés.
      */
     private static bool $hasRegisteredListeners = false;
 
+    /**
+     * Indique si `stty` est disponible (null = pas encore sondé).
+     */
     private static ?bool $stty = null;
 
     /**
-     * Create a new queue work command.
+     * Crée la commande de traitement de la file.
      */
     public function __construct(protected ContainerInterface $container, protected Console $app)
     {
@@ -97,7 +106,7 @@ class Work extends Command
     }
 
     /**
-     * Execute the console command.
+     * Exécute la commande console.
      *
      * @return int|null
      */
@@ -109,16 +118,12 @@ class Work extends Command
             return $this->worker->sleep($this->option('sleep'));
         }
 
-        // We'll listen to the processed and failed events so we can write information
-        // to the console as jobs are processed, which will let the developer watch
-        // which jobs are coming through a queue and be informed on its progress.
+        // Écoute des événements de succès / échec pour afficher la progression en console.
         $this->listenForEvents();
 
         $connection = $this->argument('connection') ?: config('queue.default');
 
-        // We need to get the right queue for the connection which is set in the queue
-        // configuration file for the application. We will pull it based on the set
-        // connection being run for the queue operation currently being executed.
+        // File cible : option --queue, sinon valeur de configuration de la connexion.
         $queue = $this->getQueue($connection);
 
         if (! $this->outputUsingJson() && static::terminalHasSttyAvailable()) {
@@ -133,7 +138,7 @@ class Work extends Command
     }
 
     /**
-     * Run the worker instance.
+     * Lance l'instance du worker.
      */
     protected function runWorker(string $connection, string $queue): ?int
     {
@@ -146,7 +151,7 @@ class Work extends Command
     }
 
     /**
-     * Gather all of the queue worker options as a single object.
+     * Regroupe les options du worker dans un seul objet.
      */
     protected function gatherWorkerOptions(): WorkerOptions
     {
@@ -166,7 +171,7 @@ class Work extends Command
     }
 
     /**
-     * Listen for the queue events in order to update the console output.
+     * Écoute les événements de file pour mettre à jour la sortie console.
      */
     protected function listenForEvents(): void
     {
@@ -196,7 +201,7 @@ class Work extends Command
     }
 
     /**
-     * Write the status output for the queue worker for JSON or TTY.
+     * Affiche l'état du worker (JSON ou TTY).
      */
     protected function writeOutput(Job $job, string $status, ?Throwable $exception = null): void
     {
@@ -210,7 +215,7 @@ class Work extends Command
     }
 
     /**
-     * Write the status output for the queue worker.
+     * Affiche l'état du worker dans le terminal.
      */
     protected function writeOutputForCli(Job $job, string $status): void
     {
@@ -247,7 +252,7 @@ class Work extends Command
     }
 
     /**
-     * Write the status output for the queue worker in JSON format.
+     * Affiche l'état du worker au format JSON.
      */
     protected function writeOutputAsJson(Job $job, $status, ?Throwable $exception = null): void
     {
@@ -281,7 +286,7 @@ class Work extends Command
     }
 
     /**
-     * Get the current date / time.
+     * Retourne la date et l'heure courantes.
      */
     protected function now(): Date
     {
@@ -295,7 +300,7 @@ class Work extends Command
     }
 
     /**
-     * Store a failed job event.
+     * Enregistre un événement de job échoué.
      */
     protected function logFailedJob(QueueEvent $event): void
     {
@@ -308,7 +313,7 @@ class Work extends Command
     }
 
     /**
-     * Get the queue name for the worker.
+     * Retourne le nom de file à traiter par le worker.
      */
     protected function getQueue(string $connection): string
     {
@@ -318,7 +323,7 @@ class Work extends Command
     }
 
     /**
-     * Determine if the worker should run in maintenance mode.
+     * Indique si l'application est en maintenance (et si le worker doit s'arrêter).
      */
     protected function downForMaintenance(): false
     {
@@ -328,7 +333,7 @@ class Work extends Command
     }
 
     /**
-     * Determine if the worker should output using JSON.
+     * Indique si la sortie du worker doit être en JSON.
      */
     protected function outputUsingJson(): bool
     {
@@ -336,19 +341,24 @@ class Work extends Command
     }
 
     /**
-     * Reset static variables.
+     * Réinitialise les variables statiques.
      */
     public static function flushState(): void
     {
         static::$hasRegisteredListeners = false;
     }
 
+    /**
+     * Indique si la sortie console est silencieuse (non CLI ou mode suppress).
+     */
     protected function isSilent(): bool
     {
         return $this->suppress || !is_cli();
     }
 
     /**
+     * Indique si le terminal courant prend en charge `stty`.
+     *
      * @internal
      */
     protected static function terminalHasSttyAvailable(): bool
@@ -357,7 +367,7 @@ class Work extends Command
             return self::$stty;
         }
 
-        // skip check if shell_exec function is disabled
+        // Pas de vérification si shell_exec est désactivé
         if (!\function_exists('shell_exec')) {
             return false;
         }

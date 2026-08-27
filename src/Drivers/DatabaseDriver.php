@@ -21,19 +21,22 @@ use DateTimeInterface;
 use DateInterval;
 use Throwable;
 
+/**
+ * Pilote de file d'attente persisté en base de données.
+ */
 class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
 {
     /**
-     * The cached lock type for popping jobs.
+     * Type de verrou mis en cache pour le prélèvement des jobs.
      *
      * @var string|bool|null
      */
     protected $lockForPopping = null;
 
     /**
-     * Create a new database queue instance.
+     * Crée une instance de file d'attente base de données.
      * 
-     * @param string $default The name of the default queue.
+     * @param string $default Nom de la file par défaut.
      */
     public function __construct(protected JobModel $model, protected string $default = 'default', bool $dispatchAfterCommit = false)
 	{
@@ -41,9 +44,9 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
 	/**
-     * Establish a queue connection.
+     * Établit une connexion de file d'attente.
      *
-     * @param  array  $config
+     * @param array<string, mixed> $config Configuration de la connexion.
      */
     public static function connect(ContainerInterface $container, array $config): QueueContract
     {
@@ -78,7 +81,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the size of the queue.
+     * Retourne le nombre total de jobs dans la file.
      */
     public function size(?string $queue = null): int
     {
@@ -86,7 +89,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of pending jobs.
+     * Retourne le nombre de jobs en attente.
      */
     public function pendingSize(?string $queue = null): int
     {
@@ -94,7 +97,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of delayed jobs.
+     * Retourne le nombre de jobs retardés.
      */
     public function delayedSize(?string $queue = null): int
     {
@@ -102,7 +105,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of reserved jobs.
+     * Retourne le nombre de jobs réservés.
      */
     public function reservedSize(?string $queue = null): int
     {
@@ -110,7 +113,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the pending jobs for the given queue.
+     * Retourne les jobs en attente de la file donnée.
      *
      * @return Collection<int, InspectedJob>
      */
@@ -121,7 +124,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the delayed jobs for the given queue.
+     * Retourne les jobs retardés de la file donnée.
      *
      * @return Collection<int, InspectedJob>
      */
@@ -132,7 +135,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the reserved jobs for the given queue.
+     * Retourne les jobs réservés de la file donnée.
      *
      * @return Collection<int, InspectedJob>
      */
@@ -143,7 +146,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the creation timestamp of the oldest pending job, excluding delayed jobs.
+     * Retourne l'horodatage de création du plus ancien job en attente (hors retardés).
      */
     public function creationTimeOfOldestPendingJob(?string $queue = null): ?int
     {
@@ -151,7 +154,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a new job onto the queue.
+     * Envoie un nouveau job dans la file.
      */
     public function push(string|object $job, mixed $data = '', ?string $queue = null): mixed
     {
@@ -165,7 +168,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a raw payload onto the queue.
+     * Envoie un payload brut dans la file.
      */
     public function pushRaw(string $payload, ?string $queue = null, array $options = []): mixed
     {
@@ -173,7 +176,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a new job onto the queue after (n) seconds.
+     * Envoie un job dans la file après n secondes.
      */
     public function later(DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = '', ?string $queue = null): mixed
     {
@@ -187,7 +190,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push an array of jobs onto the queue.
+     * Envoie un tableau de jobs dans la file.
 	 */
     public function bulk(array $jobs, mixed $data = '', ?string $queue = null): mixed
     {
@@ -209,7 +212,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Release a reserved job back onto the queue after (n) seconds.
+     * Relâche un job réservé dans la file après n secondes.
      */
     public function release(string $queue, DatabaseJobRecord $job, int $delay): mixed
     {
@@ -217,7 +220,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a raw payload to the database with a given delay of (n) seconds.
+     * Insère un payload brut en base avec un délai de n secondes.
      */
     protected function pushToDatabase(?string $queue, string $payload, DateTimeInterface|DateInterval|int $delay = 0, int $attempts = 0): mixed
     {
@@ -230,7 +233,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Create an array to insert for the given job.
+     * Construit le tableau à insérer pour le job donné.
      */
     protected function buildDatabaseRecord(?string $queue, string $payload, int $availableAt, int $attempts = 0): array
     {
@@ -245,7 +248,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Pop the next job off of the queue.
+     * Prélève le prochain job de la file.
      *
      * @throws Throwable
      */
@@ -262,14 +265,14 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
                 }
             });
         } catch (Throwable $e) {
-            // Potentially invalid job that we need to fail (#58978)...
+            // Job potentiellement invalide : on tente de le marquer en échec.
             if ($jobRecord) {
                 try {
                     (new DatabaseJob(
                         $this->container, $this, $jobRecord, $this->connectionName, $queue
                     ))->fail($e);
                 } catch (Throwable) {
-                    // Ignore and throw the original exception...
+                    // Ignore et relance l'exception d'origine.
                 }
             }
 
@@ -278,7 +281,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the next available job for the queue.
+     * Retourne le prochain job disponible de la file.
      */
     protected function getNextAvailableJob(?string $queue): ?DatabaseJobRecord
     {
@@ -288,7 +291,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the lock required for popping the next job.
+     * Retourne le verrou SQL nécessaire pour prélever le prochain job.
      *
      * @return string|bool
      */
@@ -325,7 +328,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Marshal the reserved job into a DatabaseJob instance.
+     * Transforme le job réservé en instance DatabaseJob.
      */
     protected function marshalJob(string $queue, DatabaseJobRecord $job): DatabaseJob
     {
@@ -339,7 +342,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Mark the given job ID as reserved.
+     * Marque le job comme réservé.
      */
     protected function markJobAsReserved(DatabaseJobRecord $job): DatabaseJobRecord
     {
@@ -352,7 +355,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Delete a reserved job from the queue.
+     * Supprime un job réservé de la file.
      *
      * @throws Throwable
      */
@@ -362,7 +365,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Delete a reserved job from the reserved queue and release it.
+     * Supprime le job réservé puis le relâche dans la file.
      */
     public function deleteAndRelease(string $queue, DatabaseJob $job, int $delay): void
     {
@@ -378,7 +381,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Delete all of the jobs from the queue.
+     * Supprime tous les jobs de la file.
      */
     public function clear(string $queue): bool
     {
@@ -386,7 +389,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the queue or return the default.
+     * Retourne le nom de file, ou la file par défaut.
      */
     public function getQueue(?string $queue): string
     {
@@ -394,7 +397,7 @@ class DatabaseDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the underlying database instance.
+     * Retourne l'instance de connexion base de données.
      */
     public function getDatabase(): ConnectionInterface
     {

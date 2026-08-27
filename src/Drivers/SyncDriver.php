@@ -12,10 +12,13 @@ use DateTimeInterface;
 use Psr\Container\ContainerInterface;
 use Throwable;
 
+/**
+ * Pilote synchrone : exécute le job immédiatement dans le processus courant.
+ */
 class SyncDriver extends Queue implements QueueContract, ConnectorInterface
 {
     /**
-     * Create a new sync queue instance.
+     * Crée une instance de file synchrone.
      */
     public function __construct(bool $dispatchAfterCommit = false)
     {
@@ -23,7 +26,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Establish a queue connection.
+     * Établit une connexion de file d'attente.
      */
     public static function connect(ContainerInterface $container, array $config): QueueContract
     {
@@ -32,7 +35,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
 
 
     /**
-     * Get the size of the queue.
+     * Retourne le nombre total de jobs dans la file.
      */
     public function size(?string $queue = null): int
     {
@@ -40,7 +43,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of pending jobs.
+     * Retourne le nombre de jobs en attente.
      */
     public function pendingSize(?string $queue = null): int
     {
@@ -48,7 +51,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of delayed jobs.
+     * Retourne le nombre de jobs retardés.
      */
     public function delayedSize(?string $queue = null): int
     {
@@ -56,7 +59,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of reserved jobs.
+     * Retourne le nombre de jobs réservés.
      */
     public function reservedSize(?string $queue = null): int
     {
@@ -64,7 +67,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the pending jobs for the given queue.
+     * Retourne les jobs en attente de la file donnée.
      */
     public function pendingJobs(?string $queue = null): Collection
     {
@@ -72,7 +75,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the delayed jobs for the given queue.
+     * Retourne les jobs retardés de la file donnée.
      */
     public function delayedJobs(?string $queue = null): Collection
     {
@@ -80,7 +83,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the reserved jobs for the given queue.
+     * Retourne les jobs réservés de la file donnée.
      */
     public function reservedJobs(?string $queue = null): Collection
     {
@@ -88,7 +91,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the creation timestamp of the oldest pending job, excluding delayed jobs.
+     * Retourne l'horodatage de création du plus ancien job en attente (hors retardés).
      */
     public function creationTimeOfOldestPendingJob(?string $queue = null): ?int
     {
@@ -96,7 +99,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a new job onto the queue.
+     * Envoie un nouveau job dans la file.
      *
      * @throws Throwable
      */
@@ -125,7 +128,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Execute a given job synchronously.
+     * Exécute un job de façon synchrone.
      *
      * @throws Throwable
      */
@@ -151,7 +154,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Resolve a Sync job instance.
+     * Résout une instance de job synchrone.
      */
     protected function resolveJob(string $payload, string $queue): SyncJob
     {
@@ -159,7 +162,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Raise the before queue job event.
+     * Émet l'événement avant traitement du job.
      */
     protected function raiseBeforeJobEvent(Job $job): void
     {
@@ -167,7 +170,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Raise the after queue job event.
+     * Émet l'événement après traitement du job.
      */
     protected function raiseAfterJobEvent(Job $job): void
     {
@@ -175,7 +178,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Raise the job attempted event.
+     * Émet l'événement de tentative de job.
      */
     protected function raiseJobAttemptedEvent(Job $job, ?Throwable $exceptionOccurred = null): void
     {
@@ -183,7 +186,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Raise the exception occurred queue job event.
+     * Émet l'événement d'exception survenue sur un job.
      */
     protected function raiseExceptionOccurredJobEvent(Job $job, Throwable $e): void
     {
@@ -191,7 +194,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Handle an exception that occurred while processing a job.
+     * Traite une exception survenue pendant le traitement d'un job.
      *
      * @throws Throwable
      */
@@ -205,7 +208,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a raw payload onto the queue.
+     * Envoie un payload brut dans la file.
      */
     public function pushRaw(string $payload, ?string $queue = null, array $options = []): mixed
     {
@@ -213,7 +216,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a new job onto the queue after (n) seconds.
+     * Envoie un job dans la file après n secondes.
      */
     public function later(DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = '', ?string $queue = null): mixed
     {
@@ -221,7 +224,7 @@ class SyncDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Pop the next job off of the queue.
+     * Prélève le prochain job de la file.
      */
     public function pop(?string $queue = null): ?Job
     {

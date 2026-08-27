@@ -10,10 +10,13 @@ use BlitzPHP\Utilities\Iterable\Collection;
 use DateInterval;
 use DateTimeInterface;
 
+/**
+ * Pilote nul : accepte les jobs sans les stocker ni les exécuter.
+ */
 class NullDriver extends Queue implements QueueContract, ConnectorInterface
 {
     /**
-     * Establish a queue connection.
+     * Établit une connexion de file d'attente.
      */
     public static function connect(ContainerInterface $container, array $config): QueueContract
     {
@@ -21,7 +24,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the size of the queue.
+     * Retourne le nombre total de jobs dans la file.
      */
     public function size(?string $queue = null): int
     {
@@ -29,7 +32,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of pending jobs.
+     * Retourne le nombre de jobs en attente.
      */
     public function pendingSize(?string $queue = null): int
     {
@@ -37,7 +40,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of delayed jobs.
+     * Retourne le nombre de jobs retardés.
      */
     public function delayedSize(?string $queue = null): int
     {
@@ -45,7 +48,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the number of reserved jobs.
+     * Retourne le nombre de jobs réservés.
      */
     public function reservedSize(?string $queue = null): int
     {
@@ -53,7 +56,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the pending jobs for the given queue.
+     * Retourne les jobs en attente de la file donnée.
      */
     public function pendingJobs(?string $queue = null): Collection
     {
@@ -61,7 +64,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the delayed jobs for the given queue.
+     * Retourne les jobs retardés de la file donnée.
      */
     public function delayedJobs(?string $queue = null): Collection
     {
@@ -69,7 +72,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the reserved jobs for the given queue.
+     * Retourne les jobs réservés de la file donnée.
      */
     public function reservedJobs(?string $queue = null): Collection
     {
@@ -77,7 +80,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Get the creation timestamp of the oldest pending job, excluding delayed jobs.
+     * Retourne l'horodatage de création du plus ancien job en attente (hors retardés).
      */
     public function creationTimeOfOldestPendingJob(?string $queue = null): ?int
     {
@@ -85,7 +88,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a new job onto the queue.
+     * Envoie un nouveau job dans la file.
      */
     public function push(string|object $job, mixed $data = '', ?string $queue = null): mixed
     {
@@ -93,7 +96,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a raw payload onto the queue.
+     * Envoie un payload brut dans la file.
      */
     public function pushRaw(string $payload, ?string $queue = null, array $options = []): mixed
     {
@@ -101,7 +104,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Push a new job onto the queue after (n) seconds.
+     * Envoie un job dans la file après n secondes.
      */
     public function later(DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = '', ?string $queue = null): mixed
     {
@@ -109,7 +112,7 @@ class NullDriver extends Queue implements QueueContract, ConnectorInterface
     }
 
     /**
-     * Pop the next job off of the queue.
+     * Prélève le prochain job de la file.
      */
     public function pop(?string $queue = null): ?Job
     {

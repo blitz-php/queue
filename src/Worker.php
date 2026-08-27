@@ -12,96 +12,105 @@ use BlitzPHP\Queue\Exceptions\MaxAttemptsExceededException;
 use BlitzPHP\Queue\Exceptions\TimeoutExceededException;
 use BlitzPHP\Utilities\Date;
 use Illuminate\Contracts\Debug\ExceptionHandler;
-// use BlitzPHP\Database\DetectsLostConnections; // available only in blitz-php/database 1.1
+// use BlitzPHP\Database\DetectsLostConnections; // disponible uniquement dans blitz-php/database 1.1
 use Throwable;
 
+/**
+ * Worker de file d'attente.
+ *
+ * Prélève et exécute les jobs en boucle (daemon) ou un par un, gère les
+ * timeouts, les tentatives, la mémoire et les signaux POSIX.
+ */
 class Worker
 {
     // use DetectsLostConnections;
 
+    /** Code de sortie en cas de succès. */
     const EXIT_SUCCESS = EXIT_SUCCESS;
+    /** Code de sortie en cas d'erreur. */
     const EXIT_ERROR = EXIT_ERROR;
+    /** Code de sortie en cas de dépassement de la limite mémoire. */
     const EXIT_MEMORY_LIMIT = 12;
 
     /**
-     * The name of the worker.
+     * Nom du worker.
      */
     protected ?string $name;
 
 
     /**
-     * The cache repository implementation.
+     * Implémentation du dépôt de cache.
      */
     protected CacheInterface $cache;
 
     /**
-     * The exception handler instance.
+     * Gestionnaire d'exceptions (contrat Illuminate).
      *
      * @var \Illuminate\Contracts\Debug\ExceptionHandler
      */
     protected $exceptions;
 
     /**
-     * The callback used to determine if the application is in maintenance mode.
+     * Callback indiquant si l'application est en maintenance.
      *
      * @var callable
      */
     protected $isDownForMaintenance;
 
     /**
-     * The callback used to reset the application's scope.
+     * Callback de réinitialisation du périmètre applicatif entre deux jobs.
      *
      * @var callable
      */
     protected $resetScope;
 
     /**
-     * Indicates if the worker should exit.
+     * Indique si le worker doit s'arrêter.
      */
     public bool $shouldQuit = false;
 
     /**
-     * Indicates if the worker lost its connection.
+     * Indique si le worker a perdu sa connexion.
      */
     public bool $lostConnection = false;
 
     /**
-     * Indicates if the worker is paused.
+     * Indique si le worker est en pause.
      */
     public bool $paused = false;
 
     /**
-     * The callbacks used to pop jobs from queues.
+     * Callbacks utilisés pour prélever les jobs.
      *
      * @var callable[]
      */
     protected static array $popCallbacks = [];
 
     /**
-     * The custom exit code to be used when memory is exceeded.
+     * Code de sortie personnalisé en cas de dépassement mémoire.
      */
     public static ?int $memoryExceededExitCode = null;
 
     /**
-     * Indicates if the worker should report job exceptions.
+     * Indique si les exceptions de job doivent être journalisées.
      */
     public static bool $reportJobExceptions = true;
 
     /**
-     * Indicates if the worker should check for the restart signal in the cache.
+     * Indique si le worker doit consulter le signal de redémarrage en cache.
      */
     public static bool $restartable = true;
 
     /**
-     * Indicates if the worker should check for the paused signal in the cache.
+     * Indique si le worker doit consulter le signal de pause en cache.
      */
     public static bool $pausable = true;
 
     /**
-     * Create a new queue worker.
+     * Crée un worker de file d'attente.
      *
-     * @param  Manager $manager The queue manager instance.
-     * @param  QueueEventManager  $events The queue event manager instance.
+     * @param  Manager $manager Instance du gestionnaire de files.
+     * @param  QueueEventManager  $events Instance du gestionnaire d'événements de file.
      * @param  \Illuminate\Contracts\Debug\ExceptionHandler  $exceptions
      */
     public function __construct(
@@ -117,7 +126,7 @@ class Worker
     }
 
     /**
-     * Listen to the given queue in a loop.
+     * Écoute la file donnée en boucle (mode daemon).
      */
     public function daemon(string $connectionName, string $queue, WorkerOptions $options): int
     {
@@ -132,9 +141,7 @@ class Worker
         $this->raiseWorkerStartingEvent($connectionName, $queue, $options);
 
         while (true) {
-            // Before reserving any jobs, we will make sure this queue is not paused and
-            // if it is we will just pause this worker for a given amount of time and
-            // make sure we do not need to kill this worker process off completely.
+            // Avant de réserver un job, on vérifie que la file n'est pas en pause.
             if (! $this->daemonShouldRun($options, $connectionName, $queue)) {
                 [$status, $reason] = $this->pauseWorker($options, $lastRestart);
 
@@ -149,9 +156,7 @@ class Worker
                 ($this->resetScope)();
             }
 
-            // First, we will attempt to get the next job off of the queue. We will also
-            // register the timeout handler and reset the alarm for this job so it is
-            // not stuck in a frozen state forever. Then, we can fire off this job.
+            // Prélèvement du prochain job, enregistrement du timeout, puis exécution.
             $job = $this->getNextJob(
                 $this->manager->driver($connectionName), $queue
             );
@@ -160,9 +165,7 @@ class Worker
                 $this->registerTimeoutHandler($job, $options);
             }
 
-            // If the daemon should run (not in maintenance mode, etc.), then we can run
-            // fire off this job for processing. Otherwise, we will need to sleep the
-            // worker so no more jobs are processed until they should be processed.
+            // Si un job est disponible, on le traite ; sinon on attend avant de resonder.
             if ($job) {
                 $jobsProcessed++;
 
@@ -179,9 +182,7 @@ class Worker
                 $this->resetTimeoutHandler();
             }
 
-            // Finally, we will check to see if we have exceeded our memory limits or if
-            // the queue should restart based on other indications. If so, we'll stop
-            // this worker and let whatever is "monitoring" it restart the process.
+            // Arrêt si limite mémoire, signal de redémarrage, file vide, max jobs/temps, etc.
             [$status, $reason] = $this->stopIfNecessary(
                 $options, $lastRestart, $startTime, $jobsProcessed, $job
             );
@@ -193,13 +194,11 @@ class Worker
     }
 
     /**
-     * Register the worker timeout handler.
+     * Enregistre le gestionnaire de dépassement de délai du worker.
      */
     protected function registerTimeoutHandler(Job $job, WorkerOptions $options): void
     {
-        // We will register a signal handler for the alarm signal so that we can kill this
-        // process if it is running too long because it has frozen. This uses the async
-        // signals supported in recent versions of PHP to accomplish it conveniently.
+        // Gestionnaire SIGALRM : interrompt un job bloqué trop longtemps (signaux async PHP).
         pcntl_signal(SIGALRM, function () use ($job, $options) {
             if ($job) {
                 $this->markJobAsFailedIfWillExceedMaxAttempts(
@@ -226,7 +225,7 @@ class Worker
     }
 
     /**
-     * Reset the worker timeout handler.
+     * Réinitialise le gestionnaire de dépassement de délai.
      */
     protected function resetTimeoutHandler(): void
     {
@@ -234,7 +233,7 @@ class Worker
     }
 
     /**
-     * Get the appropriate timeout for the given job.
+     * Retourne le délai d'exécution applicable au job.
      */
     protected function timeoutForJob(Job $job, WorkerOptions $options): int
     {
@@ -242,7 +241,7 @@ class Worker
     }
 
     /**
-     * Determine if the daemon should process on this iteration.
+     * Indique si le daemon doit traiter un job à cette itération.
      */
     protected function daemonShouldRun(WorkerOptions $options, string $connectionName, string $queue): bool
     {
@@ -251,7 +250,7 @@ class Worker
     }
 
     /**
-     * Pause the worker for the current loop.
+     * Met le worker en pause pour l'itération courante.
      */
     protected function pauseWorker(WorkerOptions $options, int $lastRestart): ?array
     {
@@ -261,7 +260,7 @@ class Worker
     }
 
     /**
-     * Determine the exit code to stop the process if necessary.
+     * Détermine le code de sortie si le processus doit s'arrêter.
      */
     protected function stopIfNecessary(WorkerOptions $options, int $lastRestart, float|int $startTime = 0, int $jobsProcessed = 0, mixed $job = null): ?array
     {
@@ -278,7 +277,7 @@ class Worker
     }
 
     /**
-     * Process the next job on the queue.
+     * Traite le prochain job de la file.
      */
     public function runNextJob(string $connectionName, string $queue, WorkerOptions $options): void
     {
@@ -286,9 +285,7 @@ class Worker
             $this->manager->connection($connectionName), $queue
         );
 
-        // If we're able to pull a job off of the stack, we will process it and then return
-        // from this method. If there is no job on the queue, we will "sleep" the worker
-        // for the specified number of seconds, then keep processing jobs after sleep.
+        // Job disponible : traitement immédiat. File vide : pause puis nouvelle tentative.
         if ($job) {
             $this->runJob($job, $connectionName, $options);
             
@@ -299,7 +296,7 @@ class Worker
     }
 
     /**
-     * Get the next job from the queue driver.
+     * Prélève le prochain job via le pilote de file.
      */
     protected function getNextJob(Queue $driver, string $queue): ?Job
     {
@@ -342,7 +339,7 @@ class Worker
     }
 
     /**
-     * Determine if a given connection and queue is paused.
+     * Indique si la file de la connexion donnée est en pause.
      */
     protected function queuePaused(string $connectionName, string $queue): bool
     {
@@ -354,7 +351,7 @@ class Worker
     }
 
     /**
-     * Process the given job.
+     * Traite le job donné.
      */
     protected function runJob(Job $job, string $connectionName, WorkerOptions $options): void
     {
@@ -371,7 +368,7 @@ class Worker
     }
 
     /**
-     * Stop the worker if we have lost connection to a database.
+     * Arrête le worker si la connexion base de données est perdue.
      */
     protected function stopWorkerIfLostConnection(Throwable $e): void
     {
@@ -383,16 +380,14 @@ class Worker
     }
 
     /**
-     * Process the given job from the queue.
+     * Traite le job prélevé de la file.
      *
      * @throws Throwable
      */
     public function process(string $connectionName, Job $job, WorkerOptions $options): void
     {
         try {
-            // First we will raise the before job event and determine if the job has already run
-            // over its maximum attempt limits, which could primarily happen when this job is
-            // continually timing out and not actually throwing any exceptions from itself.
+            // Événement « avant job » puis contrôle du nombre maximal de tentatives.
             $this->raiseBeforeJobEvent($connectionName, $job);
 
             $this->markJobAsFailedIfAlreadyExceedsMaxAttempts(
@@ -405,9 +400,7 @@ class Worker
                 return;
             }
 
-            // Here we will fire off the job and let it process. We will catch any exceptions, so
-            // they can be reported to the developer's logs, etc. Once the job is finished the
-            // proper events will be fired to let any listeners know this job has completed.
+            // Exécution du job ; les exceptions sont capturées pour journalisation et relâchement.
             $job->fire();
 
             $this->raiseAfterJobEvent($connectionName, $job);
@@ -421,16 +414,14 @@ class Worker
     }
 
     /**
-     * Handle an exception that occurred while the job was running.
+     * Traite une exception survenue pendant l'exécution du job.
      *
      * @throws Throwable
      */
     protected function handleJobException(string $connectionName, Job $job, WorkerOptions $options, Throwable $e): void
     {
         try {
-            // First, we will go ahead and mark the job as failed if it will exceed the maximum
-            // attempts it is allowed to run the next time we process it. If so we will just
-            // go ahead and mark it as failed now so we do not have to release this again.
+            // Marque le job en échec s'il dépassera le quota de tentatives à la prochaine exécution.
             if (! $job->hasFailed()) {
                 $this->markJobAsFailedIfWillExceedMaxAttempts(
                     $connectionName, $job, (int) $options->maxTries, $e
@@ -445,9 +436,7 @@ class Worker
                 $connectionName, $job, $e
             );
         } finally {
-            // If we catch an exception, we will attempt to release the job back onto the queue
-            // so it is not lost entirely. This'll let the job be retried at a later time by
-            // another listener (or this same one). We will re-throw this exception after.
+            // Relâche le job dans la file pour une tentative ultérieure, puis relance l'exception.
             if (! $job->isDeleted() && ! $job->isReleased() && ! $job->hasFailed()) {
                 $backoff = $this->calculateBackoff($job, $options);
 
@@ -461,9 +450,9 @@ class Worker
     }
 
     /**
-     * Mark the given job as failed if it has exceeded the maximum allowed attempts.
+     * Marque le job en échec s'il a dépassé le nombre maximal de tentatives.
      *
-     * This will likely be because the job previously exceeded a timeout.
+     * Souvent dû à un dépassement de délai lors d'une tentative précédente.
      *
      * @throws Throwable
      */
@@ -487,7 +476,7 @@ class Worker
     }
 
     /**
-     * Mark the given job as failed if it has exceeded the maximum allowed attempts.
+     * Marque le job en échec s'il a dépassé le nombre maximal de tentatives.
      */
     protected function markJobAsFailedIfWillExceedMaxAttempts(string $connectionName, Job $job, int $maxTries, Throwable $e): void
     {
@@ -503,7 +492,7 @@ class Worker
     }
 
     /**
-     * Mark the given job as failed if it has exceeded the maximum allowed attempts.
+     * Marque le job en échec s'il a dépassé le nombre maximal de tentatives.
      */
     protected function markJobAsFailedIfWillExceedMaxExceptions(string $connectionName, Job $job, Throwable $e): void
     {
@@ -524,7 +513,7 @@ class Worker
     }
 
     /**
-     * Mark the given job as failed if it should fail on timeouts.
+     * Marque le job en échec s'il doit échouer au timeout.
      */
     protected function markJobAsFailedIfItShouldFailOnTimeout(string $connectionName, Job $job, Throwable $e): void
     {
@@ -534,7 +523,7 @@ class Worker
     }
 
     /**
-     * Mark the given job as failed and raise the relevant event.
+     * Marque le job en échec et émet l'événement correspondant.
      */
     protected function failJob(Job $job, Throwable $e): void
     {
@@ -542,7 +531,7 @@ class Worker
     }
 
     /**
-     * Calculate the backoff for the given job.
+     * Calcule le délai de retry du job.
      */
     protected function calculateBackoff(Job $job, WorkerOptions $options): int
     {
@@ -557,7 +546,7 @@ class Worker
     }
 
     /**
-     * Raise an event indicating the worker is starting.
+     * Émet l'événement de démarrage du worker.
      */
     protected function raiseWorkerStartingEvent(string $connectionName, string $queue, WorkerOptions $options): void
     {
@@ -565,7 +554,7 @@ class Worker
     }
 
     /**
-     * Raise an event indicating a job is being popped from the queue.
+     * Émet l'événement de prélèvement imminent.
      */
     protected function raiseBeforeJobPopEvent(string $connectionName, ?string $queue = null): void
     {
@@ -573,7 +562,7 @@ class Worker
     }
 
     /**
-     * Raise an event indicating a job has been popped from the queue.
+     * Émet l'événement de job prélevé.
      */
     protected function raiseAfterJobPopEvent(string $connectionName, ?Job $job): void
     {
@@ -581,7 +570,7 @@ class Worker
     }
 
     /**
-     * Raise an event indicating a job is being processed.
+     * Émet l'événement de traitement en cours.
      */
     protected function raiseBeforeJobEvent(string $connectionName, Job $job): void
     {
@@ -589,7 +578,7 @@ class Worker
     }
 
     /**
-     * Raise an event indicating a job has been processed.
+     * Émet l'événement de job traité.
      */
     protected function raiseAfterJobEvent(string $connectionName, Job $job): void
     {
@@ -597,7 +586,7 @@ class Worker
     }
 
     /**
-     * Raise the exception occurred queue job event.
+     * Émet l'événement d'exception survenue sur un job.
      */
     protected function raiseExceptionOccurredJobEvent(string $connectionName, Job $job, Throwable $e): void
     {
@@ -605,7 +594,7 @@ class Worker
     }
 
     /**
-     * Determine if the queue worker should restart.
+     * Indique si le worker doit redémarrer.
      */
     protected function queueShouldRestart(?int $lastRestart): bool
     {
@@ -617,7 +606,7 @@ class Worker
     }
 
     /**
-     * Get the last queue restart timestamp, or null.
+     * Retourne l'horodatage du dernier signal de redémarrage, ou null.
      */
     protected function getTimestampOfLastQueueRestart(): ?int
     {
@@ -633,7 +622,7 @@ class Worker
     }
 
     /**
-     * Enable async signals for the process.
+     * Active la gestion asynchrone des signaux pour le processus.
      */
     protected function listenForSignals(): void
     {
@@ -647,7 +636,7 @@ class Worker
     }
 
     /**
-     * Determine if "async" signals are supported.
+     * Indique si les signaux asynchrones sont disponibles.
      */
     protected function supportsAsyncSignals(): bool
     {
@@ -655,7 +644,7 @@ class Worker
     }
 
     /**
-     * Determine if the memory limit has been exceeded.
+     * Indique si la limite mémoire a été dépassée.
      */
     public function memoryExceeded(int $memoryLimit): bool
     {
@@ -663,7 +652,7 @@ class Worker
     }
 
     /**
-     * Stop listening and bail out of the script.
+     * Arrête l'écoute et quitte le script.
      */
     public function stop(int $status = 0, ?WorkerOptions $options = null, ?WorkerStopReason $reason = null): int
     {
@@ -673,7 +662,7 @@ class Worker
     }
 
     /**
-     * Kill the process.
+     * Termine le processus.
      */
     public function kill(int $status = 0, ?WorkerOptions $options = null, ?WorkerStopReason $reason = null): never
     {
@@ -687,7 +676,7 @@ class Worker
     }
 
     /**
-     * Create an instance of MaxAttemptsExceededException.
+     * Crée une instance de MaxAttemptsExceededException.
      */
     protected function maxAttemptsExceededException(Job $job): MaxAttemptsExceededException
     {
@@ -695,7 +684,7 @@ class Worker
     }
 
     /**
-     * Create an instance of TimeoutExceededException.
+     * Crée une instance de TimeoutExceededException.
      */
     protected function timeoutExceededException(Job $job): TimeoutExceededException
     {
@@ -703,7 +692,7 @@ class Worker
     }
 
     /**
-     * Sleep the script for a given number of seconds.
+     * Met le script en pause pendant un nombre de secondes donné.
      */
     public function sleep(int|float $seconds): void
     {
@@ -715,7 +704,7 @@ class Worker
     }
 
     /**
-     * Set the cache repository implementation.
+     * Définit l'implémentation du cache.
      */
     public function setCache(CacheInterface $cache): self
     {
@@ -725,7 +714,7 @@ class Worker
     }
 
     /**
-     * Set the name of the worker.
+     * Définit le nom du worker.
      */
     public function setName(string $name): self
     {
@@ -735,7 +724,7 @@ class Worker
     }
 
     /**
-     * Register a callback to be executed to pick jobs.
+     * Enregistre un callback de prélèvement des jobs.
      */
     public static function popUsing(string $workerName, callable $callback): void
     {
@@ -747,7 +736,7 @@ class Worker
     }
 
     /**
-     * Get the queue manager instance.
+     * Retourne le gestionnaire de files.
      */
     public function getManager(): Manager
     {
@@ -755,7 +744,7 @@ class Worker
     }
 
     /**
-     * Set the queue manager instance.
+     * Définit le gestionnaire de files.
      */
     public function setManager(Manager $manager): void
     {

@@ -6,13 +6,16 @@ use BlitzPHP\Contracts\Container\ContainerInterface;
 use BlitzPHP\Contracts\Queue\Job as JobContract;
 use BlitzPHP\Queue\Drivers\DatabaseDriver;
 
+/**
+ * Job persisté et prélevé via le pilote base de données.
+ */
 class DatabaseJob extends Job implements JobContract
 {
     /**
-     * Create a new job instance.
+     * Crée une nouvelle instance de job.
      *
-     * @param  DatabaseDriver  $database The database driver instance.
-     * @param  DatabaseJobRecord  $job The database job payload.
+     * @param  DatabaseDriver  $database Instance du pilote base de données.
+     * @param  DatabaseJobRecord  $job Enregistrement / payload du job en base.
      */
     public function __construct(ContainerInterface $container, protected DatabaseDriver $database, protected DatabaseJobRecord $job, string $connectionName, string $queue)
     {
@@ -22,7 +25,7 @@ class DatabaseJob extends Job implements JobContract
     }
 
     /**
-     * Release the job back into the queue after (n) seconds.
+     * Relâche le job dans la file après n secondes.
      */
     public function release(int $delay = 0): void
     {
@@ -32,7 +35,7 @@ class DatabaseJob extends Job implements JobContract
     }
 
     /**
-     * Delete the job from the queue.
+     * Supprime le job de la file.
      */
     public function delete(): void
     {
@@ -42,7 +45,7 @@ class DatabaseJob extends Job implements JobContract
     }
 
     /**
-     * Get the number of times the job has been attempted.
+     * Retourne le nombre de tentatives déjà effectuées.
      */
     public function attempts(): int
     {
@@ -50,7 +53,7 @@ class DatabaseJob extends Job implements JobContract
     }
 
     /**
-     * Get the job identifier.
+     * Retourne l'identifiant du job.
      */
     public function getJobId(): string
     {
@@ -58,7 +61,7 @@ class DatabaseJob extends Job implements JobContract
     }
 
     /**
-     * Get the raw body string for the job.
+     * Retourne le corps brut du job sous forme de chaîne.
      */
     public function getRawBody(): string
     {
@@ -66,7 +69,7 @@ class DatabaseJob extends Job implements JobContract
     }
 
     /**
-     * Get the database job record.
+     * Retourne l'enregistrement SQL du job.
      */
     public function getJobRecord(): DatabaseJobRecord
     {

@@ -18,7 +18,7 @@
     },
     "require-dev": {
         "blitz-php/coding-standard": "^1.4",
-        "blitz-php/framework": "^0.11.3",
+        "blitz-php/framework": "^0.12.4",
         "kahlan/kahlan": "^6.0",
         "phpstan/phpstan": "^2.1",
 		"predis/predis": "^2.0 || ^3.0",
@@ -38,9 +38,9 @@
         }
     },
 	"suggest": {
-        "ext-redis": "If you want to use RedisHandler",
-        "predis/predis": "If you want to use PredisHandler",
-        "php-amqplib/php-amqplib": "If you want to use RabbitMQHandler"
+        "ext-redis": "Si vous souhaitez utiliser RedisDriver",
+        "predis/predis": "Si vous souhaitez utiliser PredisDriver",
+        "php-amqplib/php-amqplib": "Si vous souhaitez utiliser RabbitMQDriver"
     },
 	"scripts": {
        "test": "vendor/bin/kahlan",

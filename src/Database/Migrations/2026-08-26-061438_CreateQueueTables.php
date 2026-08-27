@@ -5,8 +5,14 @@ namespace BlitzPHP\Queue\Database\Migrations;
 use BlitzPHP\Database\Migration\Migration;
 use BlitzPHP\Database\Migration\Structure;
 
+/**
+ * Crée les tables des jobs en file et des jobs échoués.
+ */
 class CreateQueueTables extends Migration
 {
+    /**
+     * Crée `queue_jobs` (ou table configurée) et `queue_failed_jobs`.
+     */
     public function up()
     {
         $this->create(config('queue.connections.database.table', 'queue_jobs'), function(Structure $table) {
@@ -34,6 +40,9 @@ class CreateQueueTables extends Migration
         });
     }
 
+    /**
+     * Supprime les tables de file et de jobs échoués.
+     */
     public function down()
     {
         $this->dropIfExists(config('queue.connections.database.table', 'queue_jobs'));

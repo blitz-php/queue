@@ -9,15 +9,27 @@ use BlitzPHP\Utilities\String\Text;
 use Throwable;
 
 /**
- * @property mixed $job
- * @property ?int $jobId
- * @property ?int $attempts
+ * Événement du cycle de vie de la file d'attente (job, worker, connexion, opération).
+ *
+ * @property mixed      $job
+ * @property ?int       $jobId
+ * @property ?int       $attempts
  * @property ?Throwable $exception
  */
 class QueueEvent extends Event
 {
+    /**
+     * Instant de survenue de l'événement.
+     */
     private readonly Date $timestamp;
 
+    /**
+     * @param string               $type       Identifiant de l'événement (constantes de QueueEventManager).
+     * @param string               $connection Nom de la connexion concernée.
+     * @param string|null          $queue      Nom de la file, le cas échéant.
+     * @param array<string, mixed> $metadata   Données contextuelles (job, exception, etc.).
+     * @param Date|null            $timestamp  Horodatage (maintenant par défaut).
+     */
     public function __construct(
         public readonly string $type,
         public readonly string $connection,
@@ -31,7 +43,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get timestamp
+     * Retourne l'horodatage de l'événement.
      */
     public function timestamp(): Date
     {
@@ -39,7 +51,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get all metadata
+     * Retourne l'ensemble des métadonnées.
      */
     public function allMetadata(): array
     {
@@ -47,7 +59,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get metadata value by key
+     * Retourne une métadonnée par sa clé.
      */
     public function metadata(string $key, mixed $default = null): mixed
     {
@@ -55,7 +67,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Check if this is a job-related event
+     * Indique s'il s'agit d'un événement lié à un job.
      */
     public function isJobEvent(): bool
     {
@@ -63,7 +75,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Check if this is a worker-related event
+     * Indique s'il s'agit d'un événement lié au worker.
      */
     public function isWorkerEvent(): bool
     {
@@ -71,7 +83,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Check if this is an operation event (like queue.cleared)
+     * Indique s'il s'agit d'un événement d'opération (ex. file vidée).
      */
     public function isOperationEvent(): bool
     {
@@ -82,7 +94,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Check if this is a connection event
+     * Indique s'il s'agit d'un événement de connexion.
      */
     public function isConnectionEvent(): bool
     {
@@ -90,7 +102,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get job ID (for job events)
+     * Retourne l'identifiant du job (événements de job).
      */
     public function getJobId(): ?int
     {
@@ -100,7 +112,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get number of attempts (for job events)
+     * Retourne le nombre de tentatives (événements de job).
      */
     public function getAttempts(): ?int
     {
@@ -110,7 +122,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get job status (for job events)
+     * Retourne le statut du job (événements de job).
      */
     public function getStatus(): ?int
     {
@@ -120,7 +132,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get job class name (for job events)
+     * Retourne le nom de classe du job (événements de job).
      */
     public function getJobClass(): ?string
     {
@@ -128,7 +140,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get processing time in seconds (for job events)
+     * Retourne le temps de traitement en secondes.
      */
     public function getProcessingTime(): float
     {
@@ -136,7 +148,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get processing time in milliseconds (for job events)
+     * Retourne le temps de traitement en millisecondes.
      */
     public function getProcessingTimeMs(): int
     {
@@ -144,7 +156,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get exception (for failed events)
+     * Retourne l'exception (événements d'échec).
      */
     public function getException(): ?Throwable
     {
@@ -152,7 +164,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Get exception message (for failed events)
+     * Retourne le message d'exception (événements d'échec).
      */
     public function getExceptionMessage(): ?string
     {
@@ -160,7 +172,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Check if event has failed
+     * Indique si l'événement correspond à un échec.
      */
     public function hasFailed(): bool
     {
@@ -170,7 +182,7 @@ class QueueEvent extends Event
     }
 
     /**
-     * Convert to array for serialization
+     * Convertit l'événement en tableau pour sérialisation.
      */
     public function toArray(): array
     {
@@ -183,6 +195,9 @@ class QueueEvent extends Event
         ];
     }
 
+    /**
+     * Accès magique aux métadonnées et accesseurs `get*`.
+     */
     public function __get(string $name): mixed
     {
         if (method_exists($this, $method = 'get' . Text::camel($name))) {

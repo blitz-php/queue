@@ -20,44 +20,50 @@ use DateTimeInterface;
 use RuntimeException;
 use Throwable;
 
+/**
+ * Classe de base des connexions de file d'attente.
+ *
+ * Encapsule la création du payload JSON, les hooks de sérialisation,
+ * le dispatch et l'émission des événements d'enfilement.
+ */
 abstract class Queue implements QueueContract
 {
     use InteractsWithTime;
 
     /**
-     * The IoC container instance.
+     * Conteneur d'injection de dépendances.
      */
     protected ContainerInterface $container;
-    
+
     /**
-     * The Queue Event Manager instance.
+     * Gestionnaire d'événements de la file.
      */
     protected ?QueueEventManager $eventManager = null;
 
     /**
-     * The connection name for the queue.
+     * Nom de la connexion (clé de `queue.connections`).
      */
     protected string $connectionName = '';
 
     /**
-     * The original configuration for the queue.
+     * Configuration brute de la connexion.
      */
     protected array $config;
 
     /**
-     * Indicates that jobs should be dispatched after all database transactions have committed.
+     * Indique si les jobs doivent être envoyés après le commit des transactions SQL.
      */
     protected bool $dispatchAfterCommit;
 
     /**
-     * The create payload callbacks.
+     * Callbacks exécutés lors de la construction du payload.
      *
      * @var callable[]
      */
     protected static array $createPayloadCallbacks = [];
 
     /**
-     * Push a new job onto the queue.
+     * Envoie un job sur une file nommée.
      */
     public function pushOn(string $queue, string|object $job, mixed $data = ''): mixed
     {
@@ -65,7 +71,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Push a new job onto a specific queue after (n) seconds.
+     * Envoie un job sur une file nommée, avec un délai en secondes.
      */
     public function laterOn(string $queue, DateTimeInterface|DateInterval|int $delay, string|object $job, mixed $data = ''): mixed
     {
@@ -73,11 +79,11 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Push an array of jobs onto the queue.
+     * Envoie plusieurs jobs sur la file.
      *
-     * @param  array<string|Job> $jobs
-	 *
-	 * @return void
+     * @param array<int, string|Job> $jobs
+     *
+     * @return void
      */
     public function bulk(array $jobs, mixed $data = '', ?string $queue = null)
     {
@@ -94,11 +100,10 @@ abstract class Queue implements QueueContract
         return true;
     }
 
-	/**
-     * Create a payload string from the given job and data.
+    /**
+     * Construit la chaîne JSON du payload à partir du job et des données.
      *
-     *
-     * @throws InvalidPayloadException
+     * @throws InvalidPayloadException Si l'encodage JSON échoue.
      */
     protected function createPayload(string|object $job, string $queue, mixed $data = '', DateTimeInterface|DateInterval|int|null $delay = null): ?string
     {
@@ -124,7 +129,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Create a payload array from the given job and data.
+     * Construit le tableau de payload (objet métier ou handler sous forme de chaîne).
      */
     protected function createPayloadArray(string|object $job, string $queue, mixed $data = ''): array
     {
@@ -134,9 +139,9 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Create a payload for an object-based queue handler.
+     * Construit le payload d'un handler objet (job sérialisé, éventuellement chiffré).
      *
-     * @throws RuntimeException
+     * @throws RuntimeException Si la sérialisation du job échoue.
      */
     protected function createObjectPayload(object $job, string $queue): array
     {
@@ -180,7 +185,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the display name for the given job.
+     * Retourne le nom d'affichage du job (méthode `displayName()` ou FQCN).
      */
     protected function getDisplayName(object $job): string
     {
@@ -190,7 +195,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the maximum number of attempts for an object-based queue handler.
+     * Retourne le nombre maximal de tentatives défini sur le job objet.
      */
     public function getJobTries(object $job): mixed
     {
@@ -204,7 +209,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the backoff for an object-based queue handler.
+     * Retourne le backoff (délai de retry) du job objet, sous forme de liste CSV.
      */
     public function getJobBackoff(object $job): mixed
     {
@@ -226,7 +231,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the expiration timestamp for an object-based queue handler.
+     * Retourne l'horodatage d'expiration (`retryUntil`) du job objet.
      */
     public function getJobExpiration(object $job): mixed
     {
@@ -242,7 +247,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Determine if the job should be encrypted.
+     * Indique si le job doit être chiffré avant d'être persisté.
      */
     protected function jobShouldBeEncrypted(object $job): bool
     {
@@ -250,7 +255,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Create a typical, string based queue payload array.
+     * Construit un payload classique pour un handler identifié par une chaîne (`Classe@méthode`).
      */
     protected function createStringPayload(string $job, string $queue, mixed $data): array
     {
@@ -269,7 +274,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Register a callback to be executed when creating job payloads.
+     * Enregistre un callback exécuté à la création des payloads (`null` pour tout réinitialiser).
      */
     public static function createPayloadUsing(?callable $callback = null): void
     {
@@ -281,7 +286,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Create the given payload using any registered payload hooks.
+     * Applique les hooks enregistrés au tableau de payload.
      */
     protected function withCreatePayloadHooks(string $queue, array $payload): array
     {
@@ -295,7 +300,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Enqueue a job using the given callback.
+     * Enfile un job via le callback fourni, après avoir émis les événements d'enfilement.
      */
     protected function enqueueUsing(string|object $job, string $payload, ?string $queue, DateTimeInterface|DateInterval|int|null $delay, callable $callback): mixed
     {
@@ -329,7 +334,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Determine if the job should be dispatched after all database transactions have committed.
+     * Indique si le job doit attendre le commit des transactions SQL avant d'être envoyé.
      */
     protected function shouldDispatchAfterCommit(string|object $job): bool
     {
@@ -341,7 +346,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Raise the job queueing event.
+     * Émet l'événement « job en cours d'enfilement ».
      */
     protected function raiseJobQueueingEvent(?string $queue, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay): void
     {
@@ -349,13 +354,16 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Raise the job queued event.
+     * Émet l'événement « job enfilé ».
      */
     protected function raiseJobQueuedEvent(?string $queue, string|int|null $jobId, string|object $job, string $payload, DateTimeInterface|DateInterval|int|null $delay)
     {
         $this->eventManager()->jobQueued($this->connectionName, $queue, $jobId, $job, $payload, $delay);
     }
 
+    /**
+     * Retourne (et instancie si besoin) le gestionnaire d'événements de la file.
+     */
     protected function eventManager(): QueueEventManager
     {
         if (! $this->eventManager) {
@@ -366,7 +374,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the connection name for the queue.
+     * Retourne le nom de la connexion.
      */
     public function getConnectionName(): string
     {
@@ -374,7 +382,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Set the connection name for the queue.
+     * Définit le nom de la connexion.
      */
     public function setConnectionName(string $name): self
     {
@@ -384,7 +392,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the queue configuration array.
+     * Retourne le tableau de configuration de la connexion.
      */
     public function getConfig(): array
     {
@@ -392,7 +400,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Set the queue configuration array.
+     * Définit le tableau de configuration de la connexion.
      */
     public function setConfig(array $config): self
     {
@@ -402,7 +410,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Get the container instance being used by the connection.
+     * Retourne le conteneur IoC utilisé par la connexion.
      */
     public function getContainer(): ContainerInterface
     {
@@ -410,7 +418,7 @@ abstract class Queue implements QueueContract
     }
 
     /**
-     * Set the IoC container instance.
+     * Définit le conteneur IoC.
      */
     public function setContainer(ContainerInterface $container): void
     {

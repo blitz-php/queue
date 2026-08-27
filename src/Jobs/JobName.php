@@ -4,10 +4,13 @@ namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Utilities\String\Text;
 
+/**
+ * Utilitaires de résolution du nom et de la classe d'un job enfilé.
+ */
 class JobName
 {
     /**
-     * Parse the given job name into a class / method array.
+     * Découpe le nom du job en tableau [classe, méthode].
      */
     public static function parse(string $job): array
     {
@@ -15,7 +18,7 @@ class JobName
     }
 
     /**
-     * Get the resolved name of the queued job class.
+     * Retourne le nom résolu de la classe de job.
      */
     public static function resolve(string $name, array $payload): string
     {
@@ -27,7 +30,7 @@ class JobName
     }
 
     /**
-     * Get the class name for queued job class.
+     * Retourne le nom de classe du job enfilé.
      *
      * @param  array<string, mixed>  $payload
      */

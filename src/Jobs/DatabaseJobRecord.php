@@ -4,21 +4,24 @@ namespace BlitzPHP\Queue\Jobs;
 
 use BlitzPHP\Traits\Support\InteractsWithTime;
 
+/**
+ * Enveloppe d'une ligne SQL représentant un job en file d'attente.
+ */
 class DatabaseJobRecord
 {
     use InteractsWithTime;
 
     /**
-     * Create a new job record instance.
+     * Crée une instance d'enregistrement de job.
      *
-     * @param  \stdClass  $record The underlying job record.
+     * @param  \stdClass  $record Enregistrement sous-jacent du job.
      */
     public function __construct(protected \stdClass $record)
     {
     }
 
     /**
-     * Increment the number of times the job has been attempted.
+     * Incrémente le nombre de tentatives du job.
      */
     public function increment(): int
     {
@@ -28,7 +31,7 @@ class DatabaseJobRecord
     }
 
     /**
-     * Update the "reserved at" timestamp of the job.
+     * Met à jour l'horodatage de réservation du job.
      */
     public function touch(): int
     {
@@ -38,7 +41,7 @@ class DatabaseJobRecord
     }
 
     /**
-     * Dynamically access the underlying job information.
+     * Accède dynamiquement aux champs de l'enregistrement.
      */
     public function __get(string $key): mixed
     {

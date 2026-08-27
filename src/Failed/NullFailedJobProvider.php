@@ -3,6 +3,9 @@ namespace BlitzPHP\Queue\Failed;
 
 use Throwable;
 
+/**
+ * Fournisseur vide : n'enregistre aucun job échoué.
+ */
 class NullFailedJobProvider implements CountableFailedJobProvider, FailedJobProviderInterface
 {
     /**
