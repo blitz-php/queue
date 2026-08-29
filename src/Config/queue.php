@@ -10,6 +10,9 @@
  */
 
 use BlitzPHP\Queue\Drivers\DatabaseDriver;
+use BlitzPHP\Queue\Drivers\FailoverDriver;
+use BlitzPHP\Queue\Drivers\NullDriver;
+use BlitzPHP\Queue\Drivers\SyncDriver;
 
 /**
  * Configuration du composant de files d'attente (queue).
@@ -70,22 +73,22 @@ return [
              */
             'table' => env('queue.database.table', 'queue_jobs'),
 
-        	/**
-         	 * Nom de la file logique par défaut pour cette connexion
-         	 * (colonne `queue` en base). Utilisé si `queue:work` n'en précise pas.
-         	 */
+            /**
+             * Nom de la file logique par défaut pour cette connexion
+             * (colonne `queue` en base). Utilisé si `queue:work` n'en précise pas.
+             */
             'queue' => env('queue.defaultQueue', 'default'),
 
-        	/**
-         	 * Délai en secondes au-delà duquel un job réservé est considéré
-         	 * comme expiré et peut être repris par un autre worker.
-         	 */
+            /**
+             * Délai en secondes au-delà duquel un job réservé est considéré
+             * comme expiré et peut être repris par un autre worker.
+             */
             'retry_after' => (int) env('queue.retryAfter', 90),
 
-        	/**
-         	 * Si `true`, n'envoie le job qu'après le commit des transactions
-         	 * de base de données en cours.
-         	 */
+            /**
+             * Si `true`, n'envoie le job qu'après le commit des transactions
+             * de base de données en cours.
+             */
             'after_commit' => false,
         ],
 
@@ -218,9 +221,9 @@ return [
         // 'redis'    => \BlitzPHP\Queue\Drivers\RedisDriver::class,
         // 'predis'   => \BlitzPHP\Queue\Drivers\PredisDriver::class,
         // 'rabbitmq' => \BlitzPHP\Queue\Drivers\RabbitMQDriver::class,
-        'sync'     => \BlitzPHP\Queue\Drivers\SyncDriver::class,
-        'null'     => \BlitzPHP\Queue\Drivers\NullDriver::class,
-        'failover' => \BlitzPHP\Queue\Drivers\FailoverDriver::class,
+        'sync'     => SyncDriver::class,
+        'null'     => NullDriver::class,
+        'failover' => FailoverDriver::class,
     ],
 
     /**

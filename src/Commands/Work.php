@@ -11,7 +11,6 @@
 
 namespace BlitzPHP\Queue\Commands;
 
-use BlitzPHP\Cache\Handlers\BaseHandler;
 use BlitzPHP\Cli\Console\Command;
 use BlitzPHP\Cli\Console\Console;
 use BlitzPHP\Contracts\Cache\CacheInterface;
@@ -119,7 +118,7 @@ class Work extends Command
         $this->worker = service('worker');
         $this->cache  = $container->get(CacheInterface::class);
         $this->events = $container->get(EventManagerInterface::class);
-	}
+    }
 
     /**
      * Exécute la commande console.

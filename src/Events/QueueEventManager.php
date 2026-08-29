@@ -27,8 +27,8 @@ class QueueEventManager
     /**
      * Noms d'événements des opérations de file.
      */
+    public const JOB_POPPING = 'queue.job.popping';
 
-    public const JOB_POPPING                    = 'queue.job.popping';
     public const JOB_POPPED                     = 'queue.job.popped';
     public const JOB_PUSHED                     = 'queue.job.pushed';
     public const JOB_PUSH_FAILED                = 'queue.job.push.failed';

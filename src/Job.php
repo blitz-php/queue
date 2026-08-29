@@ -70,12 +70,12 @@ abstract class Job
         return $this->queue;
     }
 
-	/**
+    /**
      * Ajoute le job sur la queue dans la file d'attente
      */
     public function push(): mixed
     {
-		return $this->pushOn($this->queue);
+        return $this->pushOn($this->queue);
     }
 
     /**
@@ -91,7 +91,7 @@ abstract class Job
      */
     public function pushLater(DateInterval|DateTimeInterface|int $delay): mixed
     {
-		return $this->pushLaterOn($this->queue, $delay);
+        return $this->pushLaterOn($this->queue, $delay);
     }
 
     /**
