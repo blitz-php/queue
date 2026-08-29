@@ -1,7 +1,7 @@
 {
     "name": "blitz-php/queue",
     "description": "Gestionnaire de file d'attente pour BlitzPHP",
-    "keywords": ["blitz-php", "blitz php", "queue", "worker", "database", "redis", "predis", "file d'attente" ],
+    "keywords": ["blitz-php", "blitz php", "queue", "worker", "database", "redis", "predis" ],
     "homepage": "https://github.com/blitz-php/queue",
     "license": "MIT",
     "type": "library",
