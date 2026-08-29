@@ -11,9 +11,12 @@
 
 namespace BlitzPHP\Queue;
 
+use BlitzPHP\Queue\Config\Services;
 use BlitzPHP\Queue\Traits\Dispatchable;
 use BlitzPHP\Queue\Traits\InteractsWithQueue;
 use BlitzPHP\Queue\Traits\SerializesModels;
+use DateInterval;
+use DateTimeInterface;
 
 /**
  * Classe de base des jobs métier destinés à la file d'attente.
@@ -65,5 +68,45 @@ abstract class Job
     public function queue(): string
     {
         return $this->queue;
+    }
+
+	/**
+     * Ajoute le job sur la queue dans la file d'attente
+     */
+    public function push(): mixed
+    {
+		return $this->pushOn($this->queue);
+    }
+
+    /**
+     * Ajoute le job sur une queue spécifique dans la file d'attente
+     */
+    public function pushOn(string $queue): mixed
+    {
+        return Services::queue()->pushOn($queue, $this);
+    }
+
+    /**
+     * Ajoute le job avec délai dans la file d'attente
+     */
+    public function pushLater(DateInterval|DateTimeInterface|int $delay): mixed
+    {
+		return $this->pushLaterOn($this->queue, $delay);
+    }
+
+    /**
+     * Ajoute le job sur une queue spécifique avec délai dans la file d'attente
+     */
+    public function pushLaterOn(string $queue, DateInterval|DateTimeInterface|int $delay): mixed
+    {
+        return Services::queue()->laterOn($queue, $delay, $this);
+    }
+
+    /**
+     * Execute le job immédiatement (synchrone)
+     */
+    public function execute(): void
+    {
+        Services::container()->call([$this, 'handle']);
     }
 }

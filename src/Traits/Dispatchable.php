@@ -67,6 +67,6 @@ trait Dispatchable
     {
         $job = new static(...$parameters);
 
-        $job->handle();
+		Services::container()->call([$job, 'handle']);
     }
 }
