@@ -348,7 +348,7 @@ class Work extends Command
     /**
      * Indique si l'application est en maintenance (et si le worker doit s'arrêter).
      */
-    protected function downForMaintenance(): false
+    protected function downForMaintenance(): bool
     {
         return $this->option('force')
             ? false

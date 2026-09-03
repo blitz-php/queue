@@ -76,7 +76,9 @@ class Services extends BaseServices
                 }
             }
 
-            memory_reset_peak_usage();
+            if (function_exists('memory_reset_peak_usage')) {
+                memory_reset_peak_usage();
+            }
         };
 
         return static::$instances[Worker::class] = new Worker(
