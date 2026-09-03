@@ -10,6 +10,9 @@
  */
 
 use BlitzPHP\Queue\Drivers\DatabaseDriver;
+use BlitzPHP\Queue\Drivers\FailoverDriver;
+use BlitzPHP\Queue\Drivers\NullDriver;
+use BlitzPHP\Queue\Drivers\SyncDriver;
 
 /**
  * Configuration du composant de files d'attente (queue).
@@ -49,7 +52,7 @@ return [
              * Groupe / nom de connexion base de données BlitzPHP à utiliser
              * pour lire et écrire les jobs. Variable : `queue.database.group`.
              */
-            'group' => env('queue.database.group', 'default'),
+            'connection' => env('queue.database.group', 'default'),
 
             /**
              * Si `true`, réutilise une connexion partagée du gestionnaire de
@@ -70,23 +73,23 @@ return [
              */
             'table' => env('queue.database.table', 'queue_jobs'),
 
-        /**
-         * Nom de la file logique par défaut pour cette connexion
-         * (colonne `queue` en base). Utilisé si `queue:work` n'en précise pas.
-         */
-            // 'queue' => 'default',
+            /**
+             * Nom de la file logique par défaut pour cette connexion
+             * (colonne `queue` en base). Utilisé si `queue:work` n'en précise pas.
+             */
+            'queue' => env('queue.defaultQueue', 'default'),
 
-        /**
-         * Délai en secondes au-delà duquel un job réservé est considéré
-         * comme expiré et peut être repris par un autre worker.
-         */
-            // 'retry_after' => 60,
+            /**
+             * Délai en secondes au-delà duquel un job réservé est considéré
+             * comme expiré et peut être repris par un autre worker.
+             */
+            'retry_after' => (int) env('queue.retryAfter', 90),
 
-        /**
-         * Si `true`, n'envoie le job qu'après le commit des transactions
-         * de base de données en cours.
-         */
-            // 'after_commit' => false,
+            /**
+             * Si `true`, n'envoie le job qu'après le commit des transactions
+             * de base de données en cours.
+             */
+            'after_commit' => false,
         ],
 
         /**
@@ -215,9 +218,12 @@ return [
          * Pilote SQL : table `queue_jobs` (ou celle configurée).
          */
         'database' => DatabaseDriver::class,
-        // 'redis' => \BlitzPHP\Queue\Drivers\Redis::class,
-        // 'predis' => \BlitzPHP\Queue\Drivers\Predis::class,
-        // 'rabbitmq' => \BlitzPHP\Queue\Drivers\RabbitMQ::class,
+        // 'redis'    => \BlitzPHP\Queue\Drivers\RedisDriver::class,
+        // 'predis'   => \BlitzPHP\Queue\Drivers\PredisDriver::class,
+        // 'rabbitmq' => \BlitzPHP\Queue\Drivers\RabbitMQDriver::class,
+        'sync'     => SyncDriver::class,
+        'null'     => NullDriver::class,
+        'failover' => FailoverDriver::class,
     ],
 
     /**
@@ -249,10 +255,13 @@ return [
         'database' => env('db.connection', 'default'),
 
         /**
-         * Table SQL des jobs échoués (`uuid`, `connection`, `queue`, `payload`,
-         * `exception`, `failed_at`).
+         * Table SQL des jobs échoués (`uuid`, `connection`, `queue`, `payload`, `exception`, `failed_at`).
          */
         'table' => 'queue_failed_jobs',
+
+        // Pour le driver 'file'
+        // 'path'  => storage_path('logs/failed_jobs.json'),
+        // 'limit' => 100,
     ],
 
     /**
@@ -269,6 +278,6 @@ return [
         /**
          * Nom de la table (ou identifiant de stockage) des lots de jobs.
          */
-        'table' => 'queue.job_batches',
+        'table' => 'queue_job_batches',
     ],
 ];

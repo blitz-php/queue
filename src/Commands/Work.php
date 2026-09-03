@@ -11,7 +11,6 @@
 
 namespace BlitzPHP\Queue\Commands;
 
-use BlitzPHP\Cache\Handlers\BaseHandler;
 use BlitzPHP\Cli\Console\Command;
 use BlitzPHP\Cli\Console\Console;
 use BlitzPHP\Contracts\Cache\CacheInterface;
@@ -119,8 +118,6 @@ class Work extends Command
         $this->worker = service('worker');
         $this->cache  = $container->get(CacheInterface::class);
         $this->events = $container->get(EventManagerInterface::class);
-
-        BaseHandler::setReservedCharacters(str_replace(':', '', config('cache.reserved_characters')));
     }
 
     /**
@@ -162,7 +159,7 @@ class Work extends Command
     protected function runWorker(string $connection, string $queue): ?int
     {
         return $this->worker
-            ->setName($this->option('name'))
+            ->setName($this->option('name', 'default'))
             ->setCache($this->cache)
             ->{$this->option('once') ? 'runNextJob' : 'daemon'}(
                 $connection,
@@ -177,17 +174,17 @@ class Work extends Command
     protected function gatherWorkerOptions(): WorkerOptions
     {
         return new WorkerOptions(
-            $this->option('name'),
-            max($this->option('backoff'), $this->option('delay')),
-            $this->option('memory'),
-            $this->option('timeout'),
-            $this->option('sleep'),
-            $this->option('tries'),
+            $this->option('name', 'default'),
+            max($this->option('backoff', 0), $this->option('delay', 0)),
+            $this->option('memory', 128),
+            $this->option('timeout', 60),
+            $this->option('sleep', 3),
+            $this->option('tries', 1),
             $this->option('force', false),
             $this->option('stop-when-empty', false),
-            $this->option('max-jobs'),
-            $this->option('max-time'),
-            $this->option('rest'),
+            $this->option('max-jobs', 0),
+            $this->option('max-time', 0),
+            $this->option('rest', 0),
         );
     }
 
@@ -351,7 +348,7 @@ class Work extends Command
     /**
      * Indique si l'application est en maintenance (et si le worker doit s'arrêter).
      */
-    protected function downForMaintenance(): false
+    protected function downForMaintenance(): bool
     {
         return $this->option('force')
             ? false
