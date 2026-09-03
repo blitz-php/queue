@@ -2,6 +2,17 @@
 
 Toutes les modifications notables apportées à `BlitzPHP - Queue` seront documentées dans ce fichier.
 
+## 0.2 - 2026-09-03
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Others (Only for checking. Remove this category)
+
+* feat: ajout de méthodes pour gérer les jobs dans la file d'attente by @dimtrovich in https://github.com/blitz-php/queue/pull/6
+
+**Full Changelog**: https://github.com/blitz-php/queue/compare/0.1...0.2
+
 ## 0.1 - 2026-08-27
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->
